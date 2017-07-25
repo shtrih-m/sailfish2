@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/translations">
+        <file>translations/QmlTest.qm</file>
+        <file>translations/QmlTest-de.qm</file>
+        <file>translations/ShtrihFiscalPrinter_ru.qm</file>
+    </qresource>
+</RCC>
