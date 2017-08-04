@@ -8,11 +8,21 @@ TLVList::TLVList()
 
 }
 
+QByteArray TLVList::to866(QString value)
+{
+    QTextCodec* codec = QTextCodec::codecForName("IBM 866");
+    if (codec != nullptr)
+    {
+        return codec->fromUnicode(value);
+    }
+    return value.toLocal8Bit();
+}
+
 void TLVList::add(uint16_t tagId, QString tagValue)
 {
     addInt(tagId);
     addInt(tagValue.length());
-    buffer.append(tagValue.toLatin1());
+    buffer.append(to866(tagValue));
 }
 
 void TLVList::add(uint16_t tagId, long tagValue, int len)
