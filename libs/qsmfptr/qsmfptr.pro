@@ -37,7 +37,9 @@ HEADERS += \
     src/textfilter.h \
     src/bluetoothport2.h \
     src/serverconnection.h \
-    src/tlvlist.h
+    src/tlvlist.h \
+    src/tlvtag.h \
+    src/journalprinter.h
 
 SOURCES += \
     src/MemStream.cpp \
@@ -52,7 +54,9 @@ SOURCES += \
     src/bluetoothport2.cpp \
     src/utils.cpp \
     src/serverconnection.cpp \
-    src/tlvlist.cpp
+    src/tlvlist.cpp \
+    src/tlvtag.cpp \
+    src/journalprinter.cpp
 
 HEADERS +=  src/zint/aztec.h \
             src/zint/code49.h \

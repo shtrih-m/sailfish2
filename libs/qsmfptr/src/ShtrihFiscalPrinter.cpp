@@ -21,7 +21,7 @@
 #include "ShtrihFiscalPrinter.h"
 #include "ServerConnection.h"
 #include "fiscalprinter.h"
-//#include "gridmtx.h"
+#include "tlvtag.h"
 #include "utils.h"
 #include <qzint.h>
 #include <tlvlist.h>
@@ -137,12 +137,20 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent)
     stopFlag = false;
     pollInterval = 1000; // 1000 ms
     fdoThreadEnabled = false;
+    printTagsEnabled = true;
+    userNameEnabled = true;
+    userName = "";
+    sleepTimeInMs = 1000;
 }
 
 ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
 {
     delete mutex;
     delete filter;
+}
+
+DeviceTypeCommand ShtrihFiscalPrinter::getDeviceType(){
+    return deviceType;
 }
 
 void ShtrihFiscalPrinter::setFdoThreadEnabled(bool value){
@@ -210,10 +218,11 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
         }
         if (rc == 0) break;
 
+        qDebug() << "ERROR:  " << getErrorText2(rc);
 
         switch (rc) {
         case 0x50: {
-            QSleepThread::msleep(100);
+            QSleepThread::msleep(sleepTimeInMs);
             rc = waitForPrinting();
             if (rc != 0)
                 return rc;
@@ -256,7 +265,7 @@ int ShtrihFiscalPrinter::waitForPrinting()
             case MODE_FULLREPORT:
             case MODE_EJREPORT:
             case MODE_SLPPRINT:
-                QSleepThread::msleep(100);
+                QSleepThread::msleep(sleepTimeInMs);
                 break;
             }
             return rc;
@@ -270,7 +279,7 @@ int ShtrihFiscalPrinter::waitForPrinting()
 
         case ECR_SUBMODE_REPORT:
         case ECR_SUBMODE_PRINT: {
-            QSleepThread::msleep(100);
+            QSleepThread::msleep(sleepTimeInMs);
             break;
         }
 
@@ -285,6 +294,8 @@ int ShtrihFiscalPrinter::waitForPrinting()
 void ShtrihFiscalPrinter::connectDevice()
 {
     protocol->connect();
+
+    check(readDeviceType(deviceType));
 
     int lineNumber = 1;
     LoadGraphicsCommand loadCommand;
@@ -312,6 +323,12 @@ void ShtrihFiscalPrinter::connectDevice()
     command.hScale = 1;
     command.flags = 2;
     capPrintGraphics2 = printGraphics3(command) == 0;
+
+
+    if (userNameEnabled && (deviceType.model == 19))
+    {
+        userName = readTable(14, 1, 7);
+    }
 
     if (fdoThreadEnabled)
     {
@@ -401,7 +418,7 @@ void ShtrihFiscalPrinter::sendBlocks()
             if (sendBlock(block, answer))
             {
                 writeBlock(answer);
-                QSleepThread::msleep(100);
+                QSleepThread::msleep(sleepTimeInMs);
             }
         }
     }
@@ -2864,10 +2881,19 @@ int ShtrihFiscalPrinter::printStorno(ReceiptItemCommand& data)
     Сдача (5 байт) 0000000000…9999999999
 *****************************************************************************/
 
+void ShtrihFiscalPrinter::beforeCloseReceipt()
+{
+    if (userNameEnabled && (deviceType.model == 19))
+    {
+        fsWriteTag(1048, userName);
+    }
+}
+
 int ShtrihFiscalPrinter::closeReceipt(CloseReceiptCommand& data)
 {
     qDebug() << "closeReceipt";
 
+    beforeCloseReceipt();
     filter->closeReceipt(EVENT_BEFORE, data);
     PrinterCommand command(0x85);
     command.write(usrPassword, 4);
@@ -6400,12 +6426,53 @@ int ShtrihFiscalPrinter::fsDiscountCharge(FSDiscountCharge& data)
 
 int ShtrihFiscalPrinter::fsWriteTag(uint16_t tagId, QString tagValue){
     qDebug() << "fsWriteTag";
+
     TLVList list;
     list.add(tagId, tagValue);
     QByteArray ba = list.getData();
-    return fsWriteTLV(ba);
+
+    int rc = fsWriteTLV(ba);
+    if ((rc == 0) && printTagsEnabled)
+    {
+        printTag(tagId, tagValue);
+    }
+}
+
+int ShtrihFiscalPrinter::printTag(uint16_t tagId, QString tagValue)
+{
+    int rc = 0;
+    TlvTag* tlvTag = tlvTags.find(tagId);
+    if (tlvTag != NULL)
+    {
+        QString text = tlvTag->shortDescription;
+        text.append(": " + tagValue);
+
+        PrintStringCommand command;
+        command.text = text;
+        command.flags = SMFP_STATION_REC;
+        rc = printString(command);
+    }
+    return rc;
 }
 
 void ShtrihFiscalPrinter::setServerParams(ServerParams value){
     serverParams = value;
 }
+
+void ShtrihFiscalPrinter::journalPrintCurrentDay()
+{
+    //JournalPrinter journal(journalFileName, printer);
+    //journal.printCurrentDay();
+}
+
+void ShtrihFiscalPrinter::journalPrintDay(int dayNumber)
+{}
+
+void ShtrihFiscalPrinter::journalPrintDoc(int docNumber)
+{}
+
+void ShtrihFiscalPrinter::journalPrintDocRange(int N1, int N2)
+{}
+
+
+

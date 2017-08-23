@@ -19,6 +19,7 @@
 #include <QThread>
 #include <vector>
 
+#include "tlvtag.h"
 #include "PrinterCommand.h"
 #include "PrinterTypes.h"
 #include "fiscalprinter.h"
@@ -2202,6 +2203,7 @@ public:
     int fsPrintCorrection2(FSPrintCorrection2& data);
     int fsDiscountCharge(FSDiscountCharge& data);
     int fsWriteTag(uint16_t tagId, QString tagValue);
+    int printTag(uint16_t tagId, QString tagValue);
 
     QString PrinterDateToStr(PrinterDate date);
     QString PrinterTimeToStr(PrinterTime time);
@@ -2210,8 +2212,16 @@ public:
     bool getFdoThreadEnabled();
     void setFdoThreadEnabled(bool value);
     void setServerParams(ServerParams value);
+    DeviceTypeCommand getDeviceType();
+    void beforeCloseReceipt();
+
+    void journalPrintCurrentDay();
+    void journalPrintDay(int dayNumber);
+    void journalPrintDoc(int docNumber);
+    void journalPrintDocRange(int N1, int N2);
 private:
     QMutex* mutex;
+    TlvTags tlvTags;
     int pollInterval;
     bool stopFlag;
     bool fdoThreadEnabled;
@@ -2239,7 +2249,12 @@ private:
     PrinterFields fields;
     ServerConnection connection;
     ServerParams serverParams;
+    QString userName;
+    DeviceTypeCommand deviceType;
 public:
+    int sleepTimeInMs;
+    bool userNameEnabled;
+    bool printTagsEnabled;
     uint32_t lineLength[10];
     PrinterAlignment imageAlignment;
 

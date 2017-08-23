@@ -56,6 +56,10 @@ private:
     void printImages();
     void printImage(QString path);
     void printImage(QImage image);
+    void waitForDocuments();
+    void testFile();
+    void testJournalPrinter();
+    void printReceiptCopy();
 };
 
 #endif // PRINTERTEST_H

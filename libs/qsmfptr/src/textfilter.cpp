@@ -137,7 +137,7 @@ void TextFilter::addCenter(QString c, QString text)
 
 void TextFilter::add(QString text)
 {
-    qDebug() << "TextFilter: " << text;
+    //qDebug() << "TextFilter: " << text;
 
     QFile file(fileName);
     if (file.open(QIODevice::ReadWrite | QIODevice::Text))
@@ -145,7 +145,7 @@ void TextFilter::add(QString text)
         file.seek(file.size());
         QTextStream out(&file);
         out.setCodec("UTF-8");
-        out << text << endl;
+        out << text.toUtf8() << endl;
         file.close();
     }
 }

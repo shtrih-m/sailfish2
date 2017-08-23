@@ -18,6 +18,7 @@
 #include "utils.h"
 #include "zint.h"
 #include "textfilter.h"
+#include "journalprinter.h"
 
 
 PrinterTest::PrinterTest(QObject* parent)
@@ -27,31 +28,83 @@ PrinterTest::PrinterTest(QObject* parent)
 
 void PrinterTest::execute()
 {
+    qDebug("PrinterTest::execute");
+
     try {
-        qDebug("PrinterTest::execute");
+        //testFile();
 
         connectPrinter();
+        printZReport();
         printSaleReceipt();
+        printReceiptCopy();
+        //testJournalPrinter();
 
-        while (true)
-        {
-            int rc = 0;
-            ReadShortStatusCommand status;
-            rc = printer.readShortStatus(status);
-            if (rc != 0) break;
-
-            int docCount = 0;
-            rc = printer.fsReadDocCount(docCount);
-            if (rc != 0) break;
-            qDebug() << "docCount = " << docCount;
-            if (docCount == 0) break;
-
-            QThread::msleep(3000);
-        }
-        printer.disconnectDevice();
-        qDebug("Printer disconnected!");
+        //printSaleReceipt();
+        //waitForDocuments();
+        //printer.disconnectDevice();
+        //qDebug("Printer disconnected!");
     } catch (PortException e) {
         qDebug() << e.getText();
+    }
+}
+
+void PrinterTest::testJournalPrinter()
+{
+    JournalPrinter jpriner("journal.txt", &printer);
+    jpriner.print();
+}
+
+void PrinterTest::testFile()
+{
+    qDebug() << "testFile.0";
+
+    /*
+    PrintStringCommand command;
+    command.flags = SMFP_STATION_REC;
+    command.text = "Строка 0";
+    printer.printString(command);
+    */
+
+    QString line;
+    QString fileName = "Journal.txt";
+
+    qDebug() << "writeFile";
+    QFile file(fileName);
+    if (file.open(QIODevice::ReadWrite | QIODevice::Text))
+    {
+        QTextStream stream(&file);
+        stream.setCodec("UTF-8");
+        line = "Строка 1";
+        stream << line.toUtf8() << endl;
+        file.close();
+    }
+
+    qDebug() << "readFile";
+    QFile file1(fileName);
+    if (file1.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream stream(&file1);
+        stream.setCodec("UTF-8");
+        stream.seek(0);
+
+        qDebug() << stream.readLine();
+
+        file1.close();
+    }
+    qDebug() << "testFile.1";
+}
+
+void PrinterTest::waitForDocuments()
+{
+    while (true)
+    {
+        int docCount = 0;
+        int rc = printer.fsReadDocCount(docCount);
+        if (rc != 0) break;
+        qDebug() << "docCount = " << docCount;
+        if (docCount == 0) break;
+
+        QThread::msleep(3000);
     }
 }
 
@@ -221,13 +274,13 @@ void PrinterTest::connectPrinter()
     PrinterProtocol2* protocol = new PrinterProtocol2(port);
     printer.setProtocol(protocol);
     printer.setTimeout(10000);
-    printer.setFdoThreadEnabled(true);
-
-    //TextFilter* filter = new TextFilter(&printer);
-    //printer.setFilter(filter);
+    printer.setFdoThreadEnabled(false);
 
     printer.connectDevice();
     qDebug("Printer connected!");
+
+    TextFilter* filter = new TextFilter(&printer);
+    printer.setFilter(filter);
 }
 
 void PrinterTest::readFileTest()
@@ -580,6 +633,13 @@ void PrinterTest::printReceipts()
     }
 }
 
+void PrinterTest::printReceiptCopy()
+{
+    qDebug() << "printReceiptCopy";
+    PasswordCommand command;
+    check(printer.printCopy(command));
+}
+
 void PrinterTest::printSaleReceipt()
 {
     qDebug() << "printSaleReceipt.0";
@@ -608,6 +668,9 @@ void PrinterTest::printSaleReceipt()
     itemCommand.text = itemText;
     check(printer.printSale(itemCommand));
     check(printer.waitForPrinting());
+    // addTag
+    printer.fsWriteTag(1008, "89168191324");
+    printer.fsWriteTag(1009, "835683746574");
     // Close receipt
     CloseReceiptCommand closeCommand;
     closeCommand.amount1 = 123456;
@@ -621,7 +684,7 @@ void PrinterTest::printSaleReceipt()
     closeCommand.tax4 = 0;
     closeCommand.text = "Закрытие чека";
     check(printer.closeReceipt(closeCommand));
-    check(printer.waitForPrinting());
+    //check(printer.waitForPrinting());
 
     qDebug() << "printSaleReceipt.1";
 }
@@ -682,7 +745,7 @@ void PrinterTest::printZReport()
 
     PasswordCommand command;
     printer.printZReport(command);
-    check(printer.waitForPrinting());
+    //check(printer.waitForPrinting());
 
     printDayIsOpened();
 }
