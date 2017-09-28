@@ -3,7 +3,7 @@
 
 #include <QThread>
 
-bool testBit(int value, int bit);
+bool testBit(uint64_t value, int bit);
 
 class StringUtils {
 public:

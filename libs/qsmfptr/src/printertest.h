@@ -58,7 +58,6 @@ private:
     void printImage(QImage image);
     void waitForDocuments();
     void testFile();
-    void testJournalPrinter();
     void printReceiptCopy();
 };
 

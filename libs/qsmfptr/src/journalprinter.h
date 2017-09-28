@@ -1,30 +1,31 @@
 #ifndef JOURNALPRINTER_H
 #define JOURNALPRINTER_H
 
-#include "ShtrihFiscalPrinter.h"
+#include <QString>
+#include <QStringList>
 
 class JournalPrinter
 {
 public:
-    JournalPrinter(QString afileName, ShtrihFiscalPrinter* aprinter);
+    JournalPrinter(QString afileName);
 
 private:
     QString fileName;
-    ShtrihFiscalPrinter* printer;
+    QStringList lines;
 public:
-    void print();
+    void reset();
+    QString getFileName();
     void deleteFile();
-    void printLine(QString line);
-    void printLines(QStringList lines);
+    void show(QStringList lines);
+    void setFileName(QString value);
 
-    void printCurrentDay();
-    void printDay(int dayNumber);
-    void printDoc(int docNumber);
-    void printDocRange(int N1, int N2);
+    QStringList readAll();
+    QStringList readCurrentDay();
+    QStringList readDay(int dayNumber);
+    QStringList readDoc(int docNumber);
+    QStringList readDocRange(int N1, int N2);
 
-    QStringList loadLines();
     int getDayNumber(QString line);
-    QStringList getCurrentDayReport();
     QStringList getDocument(int docNumber);
     QStringList searchZReport(int dayNumber);
 

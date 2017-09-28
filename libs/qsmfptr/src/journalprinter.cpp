@@ -1,15 +1,27 @@
 #include "journalprinter.h"
 
 #include <QFile>
+#include <QDebug>
 #include <QTextStream>
-#include "ShtrihFiscalPrinter.h"
+#include "fiscalprinter.h"
 
 #define SZReportText "СУТОЧНЫЙ ОТЧЕТ С ГАШЕНИЕМ"
 
-JournalPrinter::JournalPrinter(QString afileName, ShtrihFiscalPrinter* aprinter)
+JournalPrinter::JournalPrinter(QString afileName)
 {
     fileName = afileName;
-    printer = aprinter;
+}
+
+QString JournalPrinter::getFileName(){
+    return fileName;
+}
+
+void JournalPrinter::setFileName(QString value){
+    fileName = value;
+}
+
+void JournalPrinter::reset(){
+    lines.clear();
 }
 
 void JournalPrinter::deleteFile(){
@@ -17,55 +29,43 @@ void JournalPrinter::deleteFile(){
     file.remove();
 }
 
-void JournalPrinter::print()
+QStringList JournalPrinter::readDay(int dayNumber)
 {
-    printLines(loadLines());
-}
+    qDebug() << "readDay";
 
-void JournalPrinter::printLines(QStringList lines){
-    for (int i=0;i<lines.length();i++){
-        printLine(lines.at(i));
-    }
-}
-
-void JournalPrinter::printLine(QString line)
-{
-    PrintStringCommand command;
-    command.flags = SMFP_STATION_REC;
-    command.text = line;
-    printer->check(printer->printString(command));
-}
-
-void JournalPrinter::printDay(int dayNumber)
-{
     QStringList dst = searchZReport(dayNumber);
     QString header;
     header.sprintf("Контрольная лента Смена № %d", dayNumber);
     dst.insert(0, header);
-    printLines(dst);
+    return dst;
 }
 
-void JournalPrinter::printDoc(int docNumber)
+QStringList JournalPrinter::readDoc(int docNumber)
 {
+    qDebug() << "readDoc";
+
     QStringList dst = getDocument(docNumber);
     QString header;
     header.sprintf("Контрольная лента Документ № %d", docNumber);
     dst.insert(0, header);
-    printLines(dst);
+    return dst;
 }
 
-void JournalPrinter::printDocRange(int N1, int N2)
+QStringList JournalPrinter::readDocRange(int N1, int N2)
 {
+    qDebug() << "readDocRange";
+
     if (N1 > N2)
     {
         QString text;
         text.sprintf("Номер первого документа больше второго (%d > %d)", N1, N2);
+        qDebug() << text;
+
         throw new TextException(text);
     }
 
     if (N1 == N2) {
-        printDoc(N1);
-        return;
+        return readDoc(N1);
     }
 
     QStringList dst;
@@ -78,40 +78,40 @@ void JournalPrinter::printDocRange(int N1, int N2)
         QStringList document = getDocument(i);
         dst.append(document);
     }
-    printLines(dst);
+    return dst;
 }
 
-void JournalPrinter::printCurrentDay()
+QStringList JournalPrinter::readAll()
 {
-    QStringList dst = getCurrentDayReport();
-    printLines(dst);
-}
+    qDebug() << "readAll()";
 
-QStringList JournalPrinter::loadLines()
-{
-    QStringList lines;
-    QFile file(fileName);
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+    if (lines.size() == 0)
     {
-        file.seek(0);
-        QTextStream stream(&file);
-        stream.setCodec("UTF-8");
-        for (;;)
+        QFile file(fileName);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text))
         {
-            QString line = stream.readLine();
-            if (line == NULL) break;
-            lines.append(line);
+            file.seek(0);
+            QTextStream stream(&file);
+            stream.setCodec("UTF-8");
+            for (;;)
+            {
+                QString line = stream.readLine();
+                qDebug() << "LINE: " << line;
+
+                if (line == NULL) break;
+                lines.append(line);
+            }
+            file.close();
         }
-        file.close();
     }
     return lines;
 }
 
 int JournalPrinter::getDocumentNumber(QString line)
 {
-    if (line.contains("ИНН") && line.contains("№"))
+    if (line.contains("ИНН") && line.contains("#"))
     {
-        int startIndex = line.indexOf("№") + 1;
+        int startIndex = line.indexOf("#") + 1;
         QString number = line.mid(startIndex, 4);
         return number.toInt();
     }
@@ -139,7 +139,7 @@ QStringList JournalPrinter::getDocument(int docNumber)
 {
     int index1 = -1;
     int index2 = -1;
-    QStringList lines = loadLines();
+    QStringList lines = readAll();
 
     for (int i = lines.size() - 1; i >= 0; i--) {
         QString line = lines.at(i);
@@ -163,6 +163,7 @@ QStringList JournalPrinter::getDocument(int docNumber)
     {
         QString text;
         text.sprintf("Документ № %d не найден", docNumber);
+        qDebug() << text;
         throw new TextException(text);
     }
     lines = copyLines(lines, index1, index2);
@@ -184,7 +185,7 @@ QStringList JournalPrinter::copyLines(
 }
 
 QStringList JournalPrinter::searchZReport(int dayNumber){
-    QStringList lines = loadLines();
+    QStringList lines = readAll();
     int index1 = 0;
 
     for (int i = 0; i < lines.size(); i++) {
@@ -206,6 +207,7 @@ QStringList JournalPrinter::searchZReport(int dayNumber){
     }
     QString text;
     text.sprintf("Смена № %d не найдена", dayNumber);
+    qDebug() << text;
     throw new TextException(text);
 }
 
@@ -220,9 +222,9 @@ int JournalPrinter::getDayNumber(QString line)
     return -1;
 }
 
-QStringList JournalPrinter::getCurrentDayReport()
+QStringList JournalPrinter::readCurrentDay()
 {
-    QStringList lines = loadLines();
+    QStringList lines = readAll();
     int index1 = 0;
 
     for (int i = 0; i < lines.length(); i++) {
@@ -237,7 +239,19 @@ QStringList JournalPrinter::getCurrentDayReport()
 
     if(index1 == -1 || index1 == lines.length())
     {
-        throw new TextException("Смена не найдена");
+        QString text = "Смена не найдена";
+        qDebug() << text;
+        throw new TextException(text);
     }
     return copyLines(lines, index1, lines.size());
 }
+
+void JournalPrinter::show(QStringList lines)
+{
+    qDebug() << "show";
+    for (int i=0;i<lines.length();i++)
+    {
+        qDebug() << "SHOW: " << lines.at(i);
+    }
+}
+

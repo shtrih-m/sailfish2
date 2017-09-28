@@ -31,27 +31,31 @@ void PrinterTest::execute()
     qDebug("PrinterTest::execute");
 
     try {
-        //testFile();
+        JournalPrinter journal("journal.txt");
+        //journal.deleteFile();
 
-        connectPrinter();
-        printZReport();
-        printSaleReceipt();
-        printReceiptCopy();
-        //testJournalPrinter();
+        //journal.show(journal.readDay(5));
+        journal.show(journal.readDoc(121));
+        journal.show(journal.readDoc(122));
+        journal.show(journal.readDocRange(121, 122));
 
+
+        //connectPrinter();
         //printSaleReceipt();
-        //waitForDocuments();
+        //journal.readAll();
+
+        //printZReport();
+
+        //printer.jrnPrintAll();
+        //printer.jrnPrintDoc(114);
+        //printer.jrnPrintCurrentDay();
+        //printer.jrnPrintDay(1);
+        //printer.jrnPrintDocRange(107, 109);
         //printer.disconnectDevice();
         //qDebug("Printer disconnected!");
     } catch (PortException e) {
         qDebug() << e.getText();
     }
-}
-
-void PrinterTest::testJournalPrinter()
-{
-    JournalPrinter jpriner("journal.txt", &printer);
-    jpriner.print();
 }
 
 void PrinterTest::testFile()
@@ -275,12 +279,9 @@ void PrinterTest::connectPrinter()
     printer.setProtocol(protocol);
     printer.setTimeout(10000);
     printer.setFdoThreadEnabled(false);
-
+    printer.setJournalEnabled(true);
     printer.connectDevice();
     qDebug("Printer connected!");
-
-    TextFilter* filter = new TextFilter(&printer);
-    printer.setFilter(filter);
 }
 
 void PrinterTest::readFileTest()

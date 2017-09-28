@@ -25,6 +25,8 @@
 #include "utils.h"
 #include <qzint.h>
 #include <tlvlist.h>
+#include "JournalPrinter.h"
+#include "TextFilter.h"
 
 bool CsvTablesReader::isComment(QString line) {
     return line.startsWith("//");
@@ -141,12 +143,26 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent)
     userNameEnabled = true;
     userName = "";
     sleepTimeInMs = 1000;
+    journal = new JournalPrinter("journal.txt");
 }
 
 ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
 {
     delete mutex;
     delete filter;
+    delete journal;
+}
+
+void ShtrihFiscalPrinter::setJournalEnabled(bool value)
+{
+    if (value)
+    {
+        TextFilter* filter = new TextFilter(this);
+        filter->setFileName(journal->getFileName());
+        setFilter(filter);
+    } else{
+        setFilter(NULL);
+    }
 }
 
 DeviceTypeCommand ShtrihFiscalPrinter::getDeviceType(){
@@ -1103,7 +1119,7 @@ int ShtrihFiscalPrinter::writeLicense(LicenseCommand& data)
 int ShtrihFiscalPrinter::readLicense(LicenseCommand& data)
 {
     qDebug() << "readLicense";
-    PrinterCommand command(0x1C);
+    PrinterCommand command(0x1D);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
     if (succeeded(data.resultCode)) {
@@ -1408,7 +1424,7 @@ int ShtrihFiscalPrinter::slipEject(SlipEjectCommand& data)
 {
     qDebug() << "slipEject";
 
-    PrinterCommand command(0x29);
+    PrinterCommand command(0x2A);
     command.write(usrPassword, 4);
     command.write(data.ejectDirection, 1);
     data.resultCode = send(command);
@@ -1476,7 +1492,7 @@ int ShtrihFiscalPrinter::printRegisters(PasswordCommand& data)
 int ShtrihFiscalPrinter::readTableInfo(TableInfoCommand& data)
 {
     qDebug() << "readTableInfo";
-    PrinterCommand command(0x2B);
+    PrinterCommand command(0x2D);
     command.write(sysPassword, 4);
     command.write(data.table, 1);
     data.resultCode = send(command);
@@ -1640,6 +1656,168 @@ int ShtrihFiscalPrinter::printTaxReport(PasswordCommand& data)
     command.write(sysPassword, 4);
     data.resultCode = send(command);
     if (succeeded(data.resultCode)){
+        data.operatorNumber = command.readChar();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+
+Отчёт по кассирам
+Команда: 44H. Длина сообщения: 5 байт.
+    Пароль администратора или системного администратора или "СТАРШИЙ КАССИР"1 (4 байта)
+Ответ: 44H. Длина сообщения: 3 байта.
+    Код ошибки (1 байт)
+    Порядковый номер оператора (1 байт) 281, 29, 30
+
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::printCashierReport(PasswordCommand& data)
+{
+    qDebug() << "printCashierReport";
+    PrinterCommand command(0x44);
+    command.write(sysPassword, 4);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)){
+        data.operatorNumber = command.readChar();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+
+Отчёт почасовой
+Команда: 45H. Длина сообщения: 5 байт.
+    Пароль администратора или системного администратора или "СТАРШИЙ КАССИР"1 (4 байта)
+Ответ: 45H. Длина сообщения: 3 байта.
+    Код ошибки (1 байт)
+    Порядковый номер оператора (1 байт) 281, 29, 30
+
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::printHourReport(PasswordCommand& data)
+{
+    qDebug() << "printHourReport";
+    PrinterCommand command(0x45);
+    command.write(sysPassword, 4);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)){
+        data.operatorNumber = command.readChar();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Отчёт по товарам
+Команда: 46H. Длина сообщения: 5 байт.
+    Пароль администратора или системного администратора или "СТАРШИЙ КАССИР"1 (4 байта)
+Ответ: 46H. Длина сообщения: 3 байта.
+    Код ошибки (1 байт)
+    Порядковый номер оператора (1 байт) 281, 29, 30
+
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::printItemsReport(PasswordCommand& data)
+{
+    qDebug() << "printItemsReport";
+    PrinterCommand command(0x46);
+    command.write(sysPassword, 4);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)){
+        data.operatorNumber = command.readChar();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Печать графики-512 с масштабированием1
+Команда:	4DH. Длина сообщения: 12 байт.
+    Пароль оператора (4 байта)
+    Начальная линия (2 байта) 1…600
+    Конечная линия (2 байта) 1…600
+    Коэффициент масштабирования точки по вертикали (1 байт) 1…255
+    Коэффициент масштабирования точки по горизонтали (1 байт) 1…6
+    Флаги (1 байт) Бит 0 – контрольная лента2, Бит 1 – чековая лента, Бит 23 – подкладной документ, Бит 34 – слип чек; Бит 75 – отложенная печать графики
+Ответ:		4DH. Длина сообщения: 3 байта.
+    Код ошибки (1 байт)
+    Порядковый номер оператора (1 байт) 1…30
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::printGraphics3(PrintGraphics3Command& data)
+{
+    qDebug() << "printGraphics3" << data.startLine;
+
+    PrinterCommand command(0x4D);
+    command.write(usrPassword, 4);
+    command.write16(data.startLine);
+    command.write16(data.endLine);
+    command.write8(data.vScale);
+    command.write8(data.hScale);
+    command.write8(data.flags);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)) {
+        data.operatorNumber = command.readChar();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Загрузка графики-5121
+Команда: 	4EH. Длина сообщения: 11+X2 байт.
+    Пароль оператора (4 байта)
+    Длина линии L (1 байт) 1…40 для T = 0; 1…643 для T = 1
+    Номер начальной линии (2 байта) 1…12004 для T = 0; 1…6005 для T = 1
+    Количество последующих линий N6 (2 байта) 1…12004 для T = 0; 1…6005 для T = 1
+    Тип графического буфера T (1 байт) 0 – для команд [расширенной] графики; 1 – для команд графики-512
+    Графическая информация (X2 = N * L байт)
+Ответ:		4EH. Длина сообщения: 3 байта.
+    Код ошибки (1 байт)
+    Порядковый номер оператора (1 байт) 1…30
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::loadGraphics3(LoadGraphics3Command& data)
+{
+    qDebug() << "loadGraphics3" << data.startLine;
+
+    PrinterCommand command(0x4E);
+    command.write(usrPassword, 4);
+    command.write8(data.lineLength);
+    command.write16(data.startLine);
+    command.write16(data.lineCount);
+    command.write8(data.bufferType);
+    command.write(data.data, data.lineLength);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)) {
+        data.operatorNumber = command.readChar();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Печать графики с масштабированием1
+Команда:	4FH. Длина сообщения: 9 байт.
+    Пароль оператора (4 байта)
+    Начальная линия (1 байт) 1…200
+    Конечная линия (1 байт) 1…200
+    Масштабирование точки по вертикали (1 байт) «0» – нет
+    Масштабирование точки по горизонтали (1 байт) «0» – нет
+Ответ:		4FH. Длина сообщения: 3 байта.
+    Код ошибки (1 байт)
+    Порядковый номер оператора (1 байт) 1...30
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::printScaledGraphics(ScaledGraphicsCommand& data)
+{
+    qDebug() << "printScaledGraphics";
+
+    PrinterCommand command(0x4F);
+    command.write(usrPassword, 4);
+    command.write8(data.line1);
+    command.write8(data.line2);
+    command.write8(data.vscale);
+    command.write8(data.hscale);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)) {
         data.operatorNumber = command.readChar();
     }
     return data.resultCode;
@@ -1846,82 +2024,6 @@ int ShtrihFiscalPrinter::fmReadTotals(FMReadTotalsCommand& data)
     return data.resultCode;
 }
 
-/*****************************************************************************
-Запрос количества ФД на которые нет квитанции FF3FH
-Код команды FF3Fh . Длина сообщения: 6 байт.
-    Пароль системного администратора: 4 байта
-Ответ:	    FF3Fh Длина сообщения: 3 байт.
-    Код ошибки: 1 байт
-    Количество неподтверждённых ФД : 2 байта
-*****************************************************************************/
-
-int ShtrihFiscalPrinter::fsReadDocCount(int& docCount)
-{
-    //qDebug() << "fsReadDocCount";
-
-    PrinterCommand command(0xFF3F);
-    command.write(sysPassword, 4);
-    int resultCode = send(command);
-    if (succeeded(resultCode)) {
-        docCount = command.read(2);
-    }
-    return resultCode;
-}
-
-int ShtrihFiscalPrinter::fsReadTotals(FSReadTotalsCommand& data)
-{
-    qDebug() << "fsReadTotals";
-
-    PrinterCommand command(0xFE);
-    command.write(0xF4, 1);
-    command.write(0, 4);
-    data.resultCode = send(command);
-    if (succeeded(data.resultCode)) {
-        data.saleTotal = command.read(8);
-        data.retSaleTotal = command.read(8);
-        data.buyTotal = command.read(8);
-        data.retBuyTotal = command.read(8);
-    }
-    return data.resultCode;
-}
-
-int ShtrihFiscalPrinter::readTotals(PrinterTotals& data){
-    qDebug() << "readTotals";
-
-    int rc = 0;
-    if (capFiscalStorage)
-    {
-        FSReadTotalsCommand command;
-        rc = fsReadTotals(command);
-        if (succeeded(rc)){
-            data.saleTotal = command.saleTotal;
-            data.retSaleTotal = command.retSaleTotal;
-            data.buyTotal = command.buyTotal;
-            data.retBuyTotal = command.retBuyTotal;
-        }
-    } else
-    {
-        if (isFiscalized){
-            FMReadTotalsCommand command;
-            command.type = data.type;
-            rc = fmReadTotals(command);
-            if (succeeded(rc)){
-                data.saleTotal = command.saleTotal;
-                data.retSaleTotal = command.retSaleTotal;
-                data.buyTotal = command.buyTotal;
-                data.retBuyTotal = command.retBuyTotal;
-            }
-        } else
-        {
-            data.saleTotal = 0;
-            data.retSaleTotal = 0;
-            data.buyTotal = 0;
-            data.retBuyTotal = 0;
-        }
-    }
-    data.resultCode = rc;
-    return data.resultCode;
-}
 
 /*****************************************************************************
 Запрос даты последней записи в ФП
@@ -2114,7 +2216,7 @@ int ShtrihFiscalPrinter::fmReadFiscalization(FMReadFiscalizationCommand& data)
 {
     qDebug() << "fmReadFiscalization";
 
-    PrinterCommand command(0x0D);
+    PrinterCommand command(0x69);
     command.write(taxPassword, 4);
     command.write(data.fiscalNumber, 1);
     data.resultCode = send(command);
@@ -2123,6 +2225,61 @@ int ShtrihFiscalPrinter::fmReadFiscalization(FMReadFiscalizationCommand& data)
         data.inn = command.read(6);
         data.dayNumber = command.readShort();
         data.date = command.readDate();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Проверка накопителя ФП на сбойные записи
+Команда: 6AH. Длина сообщения: 6 байт.
+    Пароль системного администратора (4 байта)
+    Тип проверяемой записи (1 байт):
+    «0» – проверка всех записей;
+    «1» – проверка записи серийного номера;
+    «2» – проверка записей фискализаций (перерегистраций);
+    «3» – проверка записей активизаций ЭКЛЗ;
+    «4» – проверка записей сменных итогов;
+Ответ: 6AH. Длина сообщения: 5 байта.
+    Код ошибки (1 байт)
+    Порядковый номер оператора (1 байт) 30
+    Количество сбойных записей (2 байта)
+Примечание: в зависимости от модели ККТ (для параметра модели Бит 23, см. команду
+F7H).
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::fmReadCorruptedRecords(FMReadCorruptedRecordsCommand& data)
+{
+    qDebug() << "fmReadCorruptedRecords";
+
+    PrinterCommand command(0x6A);
+    command.write(sysPassword, 4);
+    command.write(data.recordType, 1);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)) {
+        data.operatorNumber = command.read(1);
+        data.recordCount = command.readShort();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Возврат названия ошибки
+Команда: 6BH. Длина сообщения: 2 байта.
+    Код ошибки (1 байт)
+Ответ: 6BH. Длина сообщения: (2+X байт).
+    Код ошибки (1 байт)
+    Название ошибки1 (X байт)
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::readErrorText(ReadErrorTextCommand& data)
+{
+    qDebug() << "readErrorText";
+
+    PrinterCommand command(0x6B);
+    command.write(data.errorCode, 1);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)) {
+        data.errorText = command.readStr();
     }
     return data.resultCode;
 }
@@ -2622,7 +2779,7 @@ int ShtrihFiscalPrinter::slipPrintItem(SlipPrintItemCommand& data)
     Порядковый номер оператора (1 байт) 1…30
 *****************************************************************************/
 
-int ShtrihFiscalPrinter::printLine(QString& text)
+int ShtrihFiscalPrinter::printLine(QString text)
 {
     qDebug() << "printLine " << text;
     PrintStringCommand command;
@@ -4048,6 +4205,198 @@ int ShtrihFiscalPrinter::openDay(PasswordCommand& data)
 }
 
 /*****************************************************************************
+Расширенный запрос
+
+Команда: F7H. Длина сообщения: 2+X байта.
+    Тип запроса (1 байт) 0…255
+    Данные (X1 байт)
+Ответ: F7H. Длина сообщения: 2+Y1 байт.
+    Код ошибки (1 байт)
+    Данные (Y1 байт)
+
+*****************************************************************************
+Тип запроса 1 – ПАРАМЕТРЫ МОДЕЛИ
+Данные (Y1 = 31):
+числовые поля
+Параметры модели
+(8 байт)
+Битовое поле (назначение бит):
+    0 – Весовой датчик контрольной ленты
+    1 – Весовой датчик чековой ленты
+    2 – Оптический датчик контрольной ленты
+    3 – Оптический датчик чековой ленты
+    4 – Датчик крышки
+    5 – Рычаг термоголовки контрольной ленты
+    6 – Рычаг термоголовки чековой ленты
+    7 – Верхний датчик подкладного документа
+    8 – Нижний датчик подкладного документа
+    9 – Презентер поддерживается
+    10 – Поддержка команд работы с презентером
+    11 – Флаг заполнения ЭКЛЗ
+    12 – ЭКЛЗ поддерживается
+    13 – Отрезчик поддерживается
+    14 – Состояние ДЯ как датчик бумаги в презентере
+    15 – Датчик денежного ящика
+    16 – Датчик бумаги на входе в презентер
+    17 – Датчик бумаги на выходе из презентера
+    18 – Купюроприемник поддерживается
+    19 – Клавиатура НИ поддерживается
+    20 – Контрольная лента поддерживается
+    21 – Подкладной документ поддерживается
+    22 – Поддержка команд нефискального документа
+    23 – Поддержка протокола Кассового Ядра (cashcore)
+    24 – Ведущие нули в ИНН
+    25 – Ведущие нули в РНМ
+    26 – Переворачивать байты при печати линии
+    27 – Блокировка ККТ по неверному паролю налогового инспектора
+    28 – Поддержка альтернативного нижнего уровня протокола ККТ
+    29 – Поддержка переноса строк символом '\n' (код 10) в командах печати строк 12H, 17H, 2FH
+    30 – Поддержка переноса строк номером шрифта (коды 1…9) в команде печати строк 2FH
+    31 – Поддержка переноса строк символом '\n' (код 10) в фискальных командах 80H…87H, 8AH, 8BH
+    32 – Поддержка переноса строк номером шрифта (коды 1…9) в
+    фискальных командах 80H…87H, 8AH, 8BH
+    33 – Права "СТАРШИЙ КАССИР" (28) на снятие отчетов: X,
+    операционных регистров, по отделам, по налогам, по кассирам,
+    почасового, по товарам
+    34 – Поддержка Бит 3 "слип чек" в командах печати: строк 12H, 17H, 2FH,
+    расширенной графики 4DH, C3H, графической линии C5H; поддержка
+    поля "результат последней печати" в команде 10H короткого запроса
+    состояния ККТ
+    35 – Поддержка блочной загрузки графики в команде C4H
+    36 – Поддержка команды 6BH "Возврат названия ошибоки"
+    37 – Поддержка флагов печати для команд печати расширенной графики
+    C3H и печати графической линии C5H
+    38 – Зарезервировано
+    39 – Поддержка МФП
+    40 – Поддержка ЭКЛЗ5
+    41 – Печать графики с масштабированием (команда 4FH)
+    42 – Загрузка и печать графики-512 (команды 4DH, 4EH)
+    43…63 – Зарезервированы
+    Ширина печати шрифтом 1 (1 байт)
+    0 – запросить командой 26H "Прочитать параметры шрифта"; 1…255
+    Ширина печати шрифтом 2 (1 байт)
+    0 – запросить командой 26H "Прочитать параметры шрифта"; 1…255
+    Номер первой печатаемой линии в графике (1 байт)
+    0, 1, 2
+    Количество цифр в ИНН (1 байт) 12, 13, 14
+    Количество цифр в РНМ (1 байт) 8, 10
+    Количество цифр в длинном РНМ
+    0 – длинный РНМ не поддерживается; 8, 14
+    Протокол ККТ v. 2.0 (1 байт)
+    Количество цифр в длинном заводском номере (1 байт)
+    0 – длинный заводской номер не поддерживается; 10, 12, 14
+    Пароль налогового инспектора по умолчанию (4 байта) 00000000…99999999
+    Пароль сист.админа по умолчанию (4 байта) 00000000…99999999
+    Номер таблицы
+    "BLUETOOTH
+    БЕСПРОВОДНОЙ
+    МОДУЛЬ" настроек
+    Bluetooth
+    (1 байт)
+    0 – таблица не поддерживается; 1…255
+    Номер поля
+    "НАЧИСЛЕНИЕ
+    НАЛОГОВ"
+    (1 байт)
+    0 – поле не поддерживается; 1…255
+    Максимальная длина
+    команды (N/LEN16)
+    (2 байта)
+    0 – по умолчанию; >>1…65535
+    Ширина
+    произвольной
+    графической линии в
+    байтах (печать
+    одномерного штрих-
+    кода)
+    (1 байт)
+    40 – для узких принтеров; 64, 72 – для широких принтеров
+    Ширина графической
+    линии в буфере
+    графики-512 (1 байт)
+    0 – поле не поддерживается; 64
+    Количество линий в
+    буфере графики-512
+    (2 байта)
+    0 – поле не поддерживается; 600, 960
+
+
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::readModelParameters(ModelParameters& data)
+{
+    qDebug() << "readModelParameters";
+
+    PrinterCommand command(0xF7);
+    command.write(1, 1);
+    int resultCode = send(command);
+    if (succeeded(resultCode))
+    {
+        uint64_t flags = command.read(8);
+        data.flagsValue = flags;
+        data.Font1Width = command.read8();
+        data.Font2Width = command.read8();
+        data.GraphicsStartLine = command.read8();
+        data.InnDigits = command.read8();
+        data.RnmDigits = command.read8();
+        data.LongRnmDigits = command.read8();
+        data.LongSerialDigits = command.read8();
+        data.DefTaxPassword = command.read32();
+        data.DefSysPassword = command.read32();
+        data.BluetoothTable = command.read8();
+        data.TaxFieldNumber = command.read8();
+        data.MaxCommandLength = command.read16();
+        data.GraphicsWidthInBytes = command.read8();
+        data.Graphics512WidthInBytes = command.read8();
+        data.Graphics512MaxHeight = command.read16();
+
+        data.flags.capJrnNearEndSensor = testBit(flags, 0);    // 0 – Весовой датчик контрольной ленты
+        data.flags.capRecNearEndSensor = testBit(flags, 1);    // 1 – Весовой датчик чековой ленты
+        data.flags.capJrnEmptySensor = testBit(flags, 2);      // 2 – Оптический датчик контрольной ленты
+        data.flags.capRecEmptySensor = testBit(flags, 3);      // 3 – Оптический датчик чековой ленты
+        data.flags.capCoverSensor = testBit(flags, 4);         // 4 – Датчик крышки
+        data.flags.capJrnLeverSensor = testBit(flags, 5);      // 5 – Рычаг термоголовки контрольной ленты
+        data.flags.capRecLeverSensor = testBit(flags, 6);      // 6 – Рычаг термоголовки чековой ленты
+        data.flags.capSlpNearEndSensor = testBit(flags, 7);    // 7 – Верхний датчик подкладного документа
+        data.flags.capSlpEmptySensor = testBit(flags, 8);      // 8 – Нижний датчик подкладного документа
+        data.flags.capPresenter = testBit(flags, 9);           // 9 – Презентер поддерживается
+        data.flags.capPresenterCommands = testBit(flags, 10);  // 10 – Поддержка команд работы с презентером
+        data.flags.capEJNearFull = testBit(flags, 11);         // 11 – Флаг заполнения ЭКЛЗ
+        data.flags.capEJ = testBit(flags, 12);                 // 12 – ЭКЛЗ поддерживается
+        data.flags.capCutter = testBit(flags, 13);             // 13 – Отрезчик поддерживается
+        data.flags.capDrawerStateAsPaper = testBit(flags, 14); // 14 – Состояние ДЯ как датчик бумаги в презентере
+        data.flags.capDrawerSensor = testBit(flags, 15);       // 15 – Датчик денежного ящика
+        data.flags.capPrsInSensor = testBit(flags, 16);        // 16 – Датчик бумаги на входе в презентер
+        data.flags.capPrsOutSensor = testBit(flags, 17);       // 17 – Датчик бумаги на выходе из презентера
+        data.flags.capBillAcceptor = testBit(flags, 18);       // 18 – Купюроприемник поддерживается
+        data.flags.capTaxKeyPad = testBit(flags, 19);          // 19 – Клавиатура НИ поддерживается
+        data.flags.capJrnPresent = testBit(flags, 20);         // 20 – Контрольная лента поддерживается
+        data.flags.capSlpPresent = testBit(flags, 21);         // 21 – Подкладной документ поддерживается
+        data.flags.capNonfiscalDoc = testBit(flags, 22);       // 22 – Поддержка команд нефискального документа
+        data.flags.capCashCore = testBit(flags, 23);           // 23 – Поддержка протокола Кассового Ядра (cashcore)
+        data.flags.capInnLeadingZero = testBit(flags, 24);     // 24 – Ведущие нули в ИНН
+        data.flags.capRnmLeadingZero = testBit(flags, 25);     // 25 – Ведущие нули в РНМ
+        data.flags.SwapGraphicsLine = testBit(flags, 26);      // 26 – Переворачивать байты при печати линии
+        data.flags.capTaxPasswordLock = testBit(flags, 27);    // 27 – Блокировка ККТ по неверному паролю налогового инспектора
+        data.flags.capProtocol2 = testBit(flags, 28);          // 28 – Поддержка альтернативного нижнего уровня протокола ККТ
+        data.flags.capLFInPrintText = testBit(flags, 29);      // 29 – Поддержка переноса строк символом '\n' (код 10) в командах печати строк 12H, 17H, 2FH
+        data.flags.capFontInPrintText = testBit(flags, 30);    // 30 – Поддержка переноса строк номером шрифта (коды 1…9) в команде печати строк 2FH
+        data.flags.capLFInFiscalCommands = testBit(flags, 31); // 31 – Поддержка переноса строк символом '\n' (код 10) в фискальных командах 80H…87H, 8AH, 8BH
+        data.flags.capFontInFiscalCommands = testBit(flags, 32); // 32 – Поддержка переноса строк номером шрифта (коды 1…9) в фискальных командах 80H…87H, 8AH, 8BH
+        data.flags.capTopCashierReports = testBit(flags, 33);   // 33 – Права "СТАРШИЙ КАССИР" (28) на снятие отчетов: X, операционных регистров, по отделам, по налогам, по кассирам, почасового, по товарам
+        data.flags.capSlpInPrintCommands = testBit(flags, 34); // 34 – Поддержка Бит 3 "слип чек" в командах печати: строк 12H, 17H, 2FH,расширенной графики 4DH, C3H, графической линии C5H; поддержка
+        data.flags.capGraphicsC4 = testBit(flags, 35);         // 35 – Поддержка блочной загрузки графики в команде C4H
+        data.flags.capCommand6B = testBit(flags, 36);          // 36 – Поддержка команды 6BH "Возврат названия ошибоки"
+        data.flags.capFlagsGraphicsEx = testBit(flags, 37);    // 37 – Поддержка флагов печати для команд печати расширенной графики C3H и печати графической линии C5H
+        data.flags.capMFP = testBit(flags, 39);                // 39 – Поддержка МФП
+        data.flags.capEJ5 = testBit(flags, 40);                // 40 – Поддержка ЭКЛЗ5
+        data.flags.capScaleGraphics = testBit(flags, 41);      // 41 – Печать графики с масштабированием (команда 4FH)
+        data.flags.capGraphics512 = testBit(flags, 42);        // 42 – Загрузка и печать графики-512 (команды 4DH, 4EH)
+    }
+    return resultCode;
+}
+
+/*****************************************************************************
 Получить тип устройства
 Команда:	FCH. Длина сообщения: 1 байт.
 Ответ:		FCH. Длина сообщения: (8+X) байт.
@@ -4079,96 +4428,19 @@ int ShtrihFiscalPrinter::readDeviceType(DeviceTypeCommand& data)
     return data.resultCode;
 }
 
-/*****************************************************************************
-Печать графики с масштабированием1
-Команда:	4FH. Длина сообщения: 9 байт.
-    Пароль оператора (4 байта)
-    Начальная линия (1 байт) 1…200
-    Конечная линия (1 байт) 1…200
-    Масштабирование точки по вертикали (1 байт) «0» – нет
-    Масштабирование точки по горизонтали (1 байт) «0» – нет
-Ответ:		4FH. Длина сообщения: 3 байта.
-    Код ошибки (1 байт)
-    Порядковый номер оператора (1 байт) 1...30
-*****************************************************************************/
-
-int ShtrihFiscalPrinter::printScaledGraphics(ScaledGraphicsCommand& data)
+int ShtrihFiscalPrinter::fsReadTotals(FSReadTotalsCommand& data)
 {
-    qDebug() << "printScaledGraphics";
+    qDebug() << "fsReadTotals";
 
-    PrinterCommand command(0x4F);
-    command.write(usrPassword, 4);
-    command.write8(data.line1);
-    command.write8(data.line2);
-    command.write8(data.vscale);
-    command.write8(data.hscale);
+    PrinterCommand command(0xFE);
+    command.write(0xF4, 1);
+    command.write(0, 4);
     data.resultCode = send(command);
     if (succeeded(data.resultCode)) {
-        data.operatorNumber = command.readChar();
-    }
-    return data.resultCode;
-}
-
-/*****************************************************************************
-Загрузка графики-5121
-Команда: 	4EH. Длина сообщения: 11+X2 байт.
-    Пароль оператора (4 байта)
-    Длина линии L (1 байт) 1…40 для T = 0; 1…643 для T = 1
-    Номер начальной линии (2 байта) 1…12004 для T = 0; 1…6005 для T = 1
-    Количество последующих линий N6 (2 байта) 1…12004 для T = 0; 1…6005 для T = 1
-    Тип графического буфера T (1 байт) 0 – для команд [расширенной] графики; 1 – для команд графики-512
-    Графическая информация (X2 = N * L байт)
-Ответ:		4EH. Длина сообщения: 3 байта.
-    Код ошибки (1 байт)
-    Порядковый номер оператора (1 байт) 1…30
-*****************************************************************************/
-
-int ShtrihFiscalPrinter::loadGraphics3(LoadGraphics3Command& data)
-{
-    qDebug() << "loadGraphics3" << data.startLine;
-
-    PrinterCommand command(0x4E);
-    command.write(usrPassword, 4);
-    command.write8(data.lineLength);
-    command.write16(data.startLine);
-    command.write16(data.lineCount);
-    command.write8(data.bufferType);
-    command.write(data.data, data.lineLength);
-    data.resultCode = send(command);
-    if (succeeded(data.resultCode)) {
-        data.operatorNumber = command.readChar();
-    }
-    return data.resultCode;
-}
-
-/*****************************************************************************
-Печать графики-512 с масштабированием1
-Команда:	4DH. Длина сообщения: 12 байт.
-    Пароль оператора (4 байта)
-    Начальная линия (2 байта) 1…600
-    Конечная линия (2 байта) 1…600
-    Коэффициент масштабирования точки по вертикали (1 байт) 1…255
-    Коэффициент масштабирования точки по горизонтали (1 байт) 1…6
-    Флаги (1 байт) Бит 0 – контрольная лента2, Бит 1 – чековая лента, Бит 23 – подкладной документ, Бит 34 – слип чек; Бит 75 – отложенная печать графики
-Ответ:		4DH. Длина сообщения: 3 байта.
-    Код ошибки (1 байт)
-    Порядковый номер оператора (1 байт) 1…30
-*****************************************************************************/
-
-int ShtrihFiscalPrinter::printGraphics3(PrintGraphics3Command& data)
-{
-    qDebug() << "printGraphics3" << data.startLine;
-
-    PrinterCommand command(0x4D);
-    command.write(usrPassword, 4);
-    command.write16(data.startLine);
-    command.write16(data.endLine);
-    command.write8(data.vScale);
-    command.write8(data.hScale);
-    command.write8(data.flags);
-    data.resultCode = send(command);
-    if (succeeded(data.resultCode)) {
-        data.operatorNumber = command.readChar();
+        data.saleTotal = command.read(8);
+        data.retSaleTotal = command.read(8);
+        data.buyTotal = command.read(8);
+        data.retBuyTotal = command.read(8);
     }
     return data.resultCode;
 }
@@ -6459,20 +6731,95 @@ void ShtrihFiscalPrinter::setServerParams(ServerParams value){
     serverParams = value;
 }
 
-void ShtrihFiscalPrinter::journalPrintCurrentDay()
+/*****************************************************************************
+Запрос количества ФД на которые нет квитанции FF3FH
+Код команды FF3Fh . Длина сообщения: 6 байт.
+    Пароль системного администратора: 4 байта
+Ответ:	    FF3Fh Длина сообщения: 3 байт.
+    Код ошибки: 1 байт
+    Количество неподтверждённых ФД : 2 байта
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::fsReadDocCount(int& docCount)
 {
-    //JournalPrinter journal(journalFileName, printer);
-    //journal.printCurrentDay();
+    //qDebug() << "fsReadDocCount";
+
+    PrinterCommand command(0xFF3F);
+    command.write(sysPassword, 4);
+    int resultCode = send(command);
+    if (succeeded(resultCode)) {
+        docCount = command.read(2);
+    }
+    return resultCode;
 }
 
-void ShtrihFiscalPrinter::journalPrintDay(int dayNumber)
-{}
+int ShtrihFiscalPrinter::readTotals(PrinterTotals& data){
+    qDebug() << "readTotals";
 
-void ShtrihFiscalPrinter::journalPrintDoc(int docNumber)
-{}
+    int rc = 0;
+    if (capFiscalStorage)
+    {
+        FSReadTotalsCommand command;
+        rc = fsReadTotals(command);
+        if (succeeded(rc)){
+            data.saleTotal = command.saleTotal;
+            data.retSaleTotal = command.retSaleTotal;
+            data.buyTotal = command.buyTotal;
+            data.retBuyTotal = command.retBuyTotal;
+        }
+    } else
+    {
+        if (isFiscalized){
+            FMReadTotalsCommand command;
+            command.type = data.type;
+            rc = fmReadTotals(command);
+            if (succeeded(rc)){
+                data.saleTotal = command.saleTotal;
+                data.retSaleTotal = command.retSaleTotal;
+                data.buyTotal = command.buyTotal;
+                data.retBuyTotal = command.retBuyTotal;
+            }
+        } else
+        {
+            data.saleTotal = 0;
+            data.retSaleTotal = 0;
+            data.buyTotal = 0;
+            data.retBuyTotal = 0;
+        }
+    }
+    data.resultCode = rc;
+    return data.resultCode;
+}
 
-void ShtrihFiscalPrinter::journalPrintDocRange(int N1, int N2)
-{}
+void ShtrihFiscalPrinter::printLines(QStringList lines){
+    for (int i=0;i<lines.length();i++){
+        check(printLine(lines.at(i)));
+    }
+}
 
+void ShtrihFiscalPrinter::jrnPrintAll()
+{
+    printLines(getJournal()->readAll());
+}
+
+void ShtrihFiscalPrinter::jrnPrintCurrentDay()
+{
+    printLines(getJournal()->readCurrentDay());
+}
+
+void ShtrihFiscalPrinter::jrnPrintDay(int dayNumber)
+{
+    printLines(getJournal()->readDay(dayNumber));
+}
+
+void ShtrihFiscalPrinter::jrnPrintDoc(int docNumber)
+{
+    printLines(getJournal()->readDoc(docNumber));
+}
+
+void ShtrihFiscalPrinter::jrnPrintDocRange(int N1, int N2)
+{
+    printLines(getJournal()->readDocRange(N1, N2));
+}
 
 

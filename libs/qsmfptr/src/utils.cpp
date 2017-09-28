@@ -1,6 +1,6 @@
 #include "utils.h"
 
-bool testBit(int value, int bit){
+bool testBit(uint64_t value, int bit){
     return (value & (1 << bit)) != 0;
 };
 

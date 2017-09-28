@@ -24,6 +24,7 @@
 #include "PrinterTypes.h"
 #include "fiscalprinter.h"
 #include "serverconnection.h"
+#include "JournalPrinter.h"
 
 // ////////////////////////////////////////////////////////////////////////
 // Field types
@@ -832,6 +833,20 @@ struct FMReadFiscalizationCommand {
     PrinterDate date; // out, Дата фискализации (перерегистрации) (3 байта) ДД-ММ-ГГ
 };
 
+struct FMReadCorruptedRecordsCommand {
+    uint8_t recordType;     // in, Тип проверяемой записи (1 байт)
+    uint8_t resultCode;     // out, результат выполнения
+    uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт)
+    uint16_t recordCount;   // out, Количество сбойных записей (2 байта)
+};
+
+struct ReadErrorTextCommand {
+    uint8_t errorCode;      // in
+    uint8_t resultCode;     // out
+    QString errorText;      // out
+};
+
+
 struct SlipDocParams {
     uint8_t docType; // Тип документа (1 байт) "0" - продажа, "1" - покупка, "2" - возврат продажи, "3" - возврат покупки
     uint8_t copyType; // Дублирование печати (извещение, квитанция) (1 байт) "0" - колонки, "1" - блоки строк
@@ -1199,6 +1214,70 @@ struct FSDiscountCharge{
     QString text;       // in, Описание скидки или надбавки: 128 байт ASCII
 };
 
+struct PrinterParametersFlags {
+  bool capJrnNearEndSensor;   // 0 – Весовой датчик контрольной ленты
+  bool capRecNearEndSensor;   // 1 – Весовой датчик чековой ленты
+  bool capJrnEmptySensor;     // 2 – Оптический датчик контрольной ленты
+  bool capRecEmptySensor;     // 3 – Оптический датчик чековой ленты
+  bool capCoverSensor;        // 4 – Датчик крышки
+  bool capJrnLeverSensor;     // 5 – Рычаг термоголовки контрольной ленты
+  bool capRecLeverSensor;     // 6 – Рычаг термоголовки чековой ленты
+  bool capSlpNearEndSensor;   // 7 – Верхний датчик подкладного документа
+  bool capSlpEmptySensor;     // 8 – Нижний датчик подкладного документа
+  bool capPresenter;          // 9 – Презентер поддерживается
+  bool capPresenterCommands;  // 10 – Поддержка команд работы с презентером
+  bool capEJNearFull;         // 11 – Флаг заполнения ЭКЛЗ
+  bool capEJ;                 // 12 – ЭКЛЗ поддерживается
+  bool capCutter;             // 13 – Отрезчик поддерживается
+  bool capDrawerStateAsPaper; // 14 – Состояние ДЯ как датчик бумаги в презентере
+  bool capDrawerSensor;       // 15 – Датчик денежного ящика
+  bool capPrsInSensor;        // 16 – Датчик бумаги на входе в презентер
+  bool capPrsOutSensor;       // 17 – Датчик бумаги на выходе из презентера
+  bool capBillAcceptor;       // 18 – Купюроприемник поддерживается
+  bool capTaxKeyPad;          // 19 – Клавиатура НИ поддерживается
+  bool capJrnPresent;         // 20 – Контрольная лента поддерживается
+  bool capSlpPresent;         // 21 – Подкладной документ поддерживается
+  bool capNonfiscalDoc;       // 22 – Поддержка команд нефискального документа
+  bool capCashCore;           // 23 – Поддержка протокола Кассового Ядра (cashcore)
+  bool capInnLeadingZero;     // 24 – Ведущие нули в ИНН
+  bool capRnmLeadingZero;     // 25 – Ведущие нули в РНМ
+  bool SwapGraphicsLine;      // 26 – Переворачивать байты при печати линии
+  bool capTaxPasswordLock;    // 27 – Блокировка ККТ по неверному паролю налогового инспектора
+  bool capProtocol2;          // 28 – Поддержка альтернативного нижнего уровня протокола ККТ
+  bool capLFInPrintText;      // 29 – Поддержка переноса строк символом '\n' (код 10) в командах печати строк 12H, 17H, 2FH
+  bool capFontInPrintText;  // 30 – Поддержка переноса строк номером шрифта (коды 1…9) в команде печати строк 2FH
+  bool capLFInFiscalCommands; // 31 – Поддержка переноса строк символом '\n' (код 10) в фискальных командах 80H…87H, 8AH, 8BH
+  bool capFontInFiscalCommands; // 32 – Поддержка переноса строк номером шрифта (коды 1…9) в фискальных командах 80H…87H, 8AH, 8BH
+  bool capTopCashierReports;   // 33 – Права "СТАРШИЙ КАССИР" (28) на снятие отчетов: X, операционных регистров, по отделам, по налогам, по кассирам, почасового, по товарам
+  bool capSlpInPrintCommands;      // 34 – Поддержка Бит 3 "слип чек" в командах печати: строк 12H, 17H, 2FH,расширенной графики 4DH, C3H, графической линии C5H; поддержка
+  bool capGraphicsC4;           // 35 – Поддержка блочной загрузки графики в команде C4H
+  bool capCommand6B;            // 36 – Поддержка команды 6BH "Возврат названия ошибоки"
+  bool capFlagsGraphicsEx;      // 37 – Поддержка флагов печати для команд печати расширенной графики C3H и печати графической линии C5H
+  bool capMFP;                  // 39 – Поддержка МФП
+  bool capEJ5;                  // 40 – Поддержка ЭКЛЗ5
+  bool capScaleGraphics;        // 41 – Печать графики с масштабированием (команда 4FH)
+  bool capGraphics512;          // 42 – Загрузка и печать графики-512 (команды 4DH, 4EH)
+};
+
+struct ModelParameters {
+  uint64_t flagsValue;
+  uint8_t Font1Width;
+  uint8_t Font2Width;
+  uint8_t GraphicsStartLine;
+  uint8_t InnDigits;
+  uint8_t RnmDigits;
+  uint8_t LongRnmDigits;
+  uint8_t LongSerialDigits;
+  uint32_t DefTaxPassword;
+  uint32_t DefSysPassword;
+  uint8_t BluetoothTable;
+  uint8_t TaxFieldNumber;
+  uint16_t MaxCommandLength;
+  uint8_t GraphicsWidthInBytes;
+  uint8_t Graphics512WidthInBytes;
+  uint16_t Graphics512MaxHeight;
+  PrinterParametersFlags flags;
+};
 
 class PrinterField
 {
@@ -1958,7 +2037,7 @@ public:
     explicit ShtrihFiscalPrinter(QObject* parent = 0);
     virtual ~ShtrihFiscalPrinter();
     void setTimeout(int value);
-
+    void setJournalEnabled(bool value);
     int send(PrinterCommand& command);
     void connectDevice();
     void disconnectDevice();
@@ -2001,6 +2080,9 @@ public:
     int printZReport(PasswordCommand& data);
     int printDepartmentReport(PasswordCommand& data);
     int printTaxReport(PasswordCommand& data);
+    int printCashierReport(PasswordCommand& data);
+    int printHourReport(PasswordCommand& data);
+    int printItemsReport(PasswordCommand& data);
     int printCashIn(CashCommand& data);
     int printCashOut(CashCommand& data);
     int printHeader(PasswordCommand& data);
@@ -2034,6 +2116,7 @@ public:
     int printGraphicsLine(GraphicsLineCommand& data);
     int openDay(PasswordCommand& data);
     int readDeviceType(DeviceTypeCommand& data);
+    int readModelParameters(ModelParameters& data);
     int printScaledGraphics(ScaledGraphicsCommand& data);
     int softReset();
     int initTables(PasswordCommand& data);
@@ -2054,6 +2137,8 @@ public:
     int fmDaysReport(FMDaysReportCommand& data);
     int fmCancelReport(PasswordCommand& data);
     int fmReadFiscalization(FMReadFiscalizationCommand& data);
+    int fmReadCorruptedRecords(FMReadCorruptedRecordsCommand& data);
+    int readErrorText(ReadErrorTextCommand& data);
     void write(PrinterCommand& command, SlipDocParams data);
     void write(PrinterCommand& command, StdSlipParams data);
     void write(PrinterCommand& command, SlipOperationParams data);
@@ -2103,7 +2188,7 @@ public:
     QString getVersion();
     int readLineLength(int font);
     int getLineLength(int font);
-    int printLine(QString& text);
+    int printLine(QString text);
     int printText(QString& text);
     QStringList splitText(QString text, int font);
     int resetPrinter();
@@ -2214,11 +2299,13 @@ public:
     void setServerParams(ServerParams value);
     DeviceTypeCommand getDeviceType();
     void beforeCloseReceipt();
+    void printLines(QStringList lines);
 
-    void journalPrintCurrentDay();
-    void journalPrintDay(int dayNumber);
-    void journalPrintDoc(int docNumber);
-    void journalPrintDocRange(int N1, int N2);
+    void jrnPrintAll();
+    void jrnPrintCurrentDay();
+    void jrnPrintDay(int dayNumber);
+    void jrnPrintDoc(int docNumber);
+    void jrnPrintDocRange(int N1, int N2);
 private:
     QMutex* mutex;
     TlvTags tlvTags;
@@ -2251,6 +2338,7 @@ private:
     ServerParams serverParams;
     QString userName;
     DeviceTypeCommand deviceType;
+    JournalPrinter* journal;
 public:
     int sleepTimeInMs;
     bool userNameEnabled;
@@ -2289,6 +2377,10 @@ public:
 
     void setTaxPassword(uint32_t value){
         taxPassword = value;
+    }
+
+    JournalPrinter* getJournal(){
+        return journal;
     }
 
 };
