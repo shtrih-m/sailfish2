@@ -236,12 +236,9 @@ QStringList JournalPrinter::readCurrentDay()
 
         index1 = findNextDocument(lines, i + 1);
     }
-
-    if(index1 == -1 || index1 == lines.length())
+    if (index1 == -1)
     {
-        QString text = "Смена не найдена";
-        qDebug() << text;
-        throw new TextException(text);
+        index1 = 0;
     }
     return copyLines(lines, index1, lines.size());
 }

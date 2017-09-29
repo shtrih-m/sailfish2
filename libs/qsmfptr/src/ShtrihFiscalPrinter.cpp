@@ -6708,6 +6708,7 @@ int ShtrihFiscalPrinter::fsWriteTag(uint16_t tagId, QString tagValue){
     {
         printTag(tagId, tagValue);
     }
+    return rc;
 }
 
 int ShtrihFiscalPrinter::printTag(uint16_t tagId, QString tagValue)

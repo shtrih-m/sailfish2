@@ -98,8 +98,8 @@ bool ServerConnection::connect()
             }
         }
         close(sk);
-        return error("Failed to create socket");
     }
+    return error("Failed to create socket");
 }
 
 bool ServerConnection::read(int size, QByteArray& packet)
