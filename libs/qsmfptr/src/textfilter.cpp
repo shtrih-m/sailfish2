@@ -118,7 +118,7 @@ void TextFilter::connect()
 void TextFilter::addFiscalSign()
 {
     if (isFiscal) {
-        addCenter("-", SFiscalSign);
+        addCenter("*", SFiscalSign);
     }
 }
 
@@ -137,7 +137,7 @@ void TextFilter::addCenter(QString c, QString text)
 
 void TextFilter::add(QString text)
 {
-    //qDebug() << "TextFilter: " << text;
+    qDebug() << "TextFilter: " << text;
 
     QFile file(fileName);
     if (file.open(QIODevice::ReadWrite | QIODevice::Text))
@@ -147,6 +147,9 @@ void TextFilter::add(QString text)
         out.setCodec("UTF-8");
         out << text.toUtf8() << endl;
         file.close();
+    } else
+    {
+        qDebug() << "Failed to open file";
     }
 }
 
@@ -164,25 +167,25 @@ void TextFilter::add(QString text, uint64_t amount)
     add(text, summToStr(amount));
 }
 
-void TextFilter::printString(int event, PrintStringCommand& data)
+void TextFilter::printString(uint8_t event, PrintStringCommand& data)
 {
     if (event == EVENT_AFTER){
         add(data.text);
     }
 }
 
-void TextFilter::printDocHeader(int event, PrintDocHeaderCommand& data){
+void TextFilter::printDocHeader(uint8_t event, PrintDocHeaderCommand& data){
     if (event == EVENT_AFTER){
         add(data.text);
     }
 }
 
-void TextFilter::cutPaper(int event, CutCommand& data){
+void TextFilter::cutPaper(uint8_t event, CutCommand& data){
     (void)(event);
     (void)(data);
 }
 
-void TextFilter::feedPaper(int event, FeedPaperCommand& data)
+void TextFilter::feedPaper(uint8_t event, FeedPaperCommand& data)
 {
     if (event == EVENT_AFTER){
         for (int i=0;i<data.count;i++){
@@ -191,13 +194,13 @@ void TextFilter::feedPaper(int event, FeedPaperCommand& data)
     }
 }
 
-void TextFilter::printStringFont(int event, PrintStringFontCommand& data){
+void TextFilter::printStringFont(uint8_t event, PrintStringFontCommand& data){
     if (event == EVENT_AFTER){
         add(data.text);
     }
 }
 
-void TextFilter::printXReport(int event, PasswordCommand& data)
+void TextFilter::printXReport(uint8_t event, PasswordCommand& data)
 {
     (void)data;
     if (event == EVENT_BEFORE){
@@ -210,7 +213,7 @@ void TextFilter::printXReport(int event, PasswordCommand& data)
     }
 }
 
-void TextFilter::printZReport(int event, PasswordCommand& data)
+void TextFilter::printZReport(uint8_t event, PasswordCommand& data)
 {
     (void)data;
     if (event == EVENT_BEFORE){
@@ -219,6 +222,8 @@ void TextFilter::printZReport(int event, PasswordCommand& data)
         beginDocument();
         add(SZReportText, buffer.sprintf("№%.4d", xreport.zReportNumber));
         addXZReport(xreport);
+        addDocMac();
+        addCenter("*", SDayClosed);
         endDocument();
     }
 }
@@ -227,7 +232,7 @@ QString TextFilter::getDocumentNumber(uint16_t value) {
     return buffer.sprintf("%.4d", value);
 }
 
-void TextFilter::printCashIn(int event, CashCommand& data)
+void TextFilter::printCashIn(uint8_t event, CashCommand& data)
 {
     if (event == EVENT_AFTER){
         isDocumentPrinted = true;
@@ -241,7 +246,7 @@ void TextFilter::printCashIn(int event, CashCommand& data)
     }
 }
 
-void TextFilter::printCashOut(int event, CashCommand& data){
+void TextFilter::printCashOut(uint8_t event, CashCommand& data){
     if (event == EVENT_AFTER){
         isDocumentPrinted = true;
         operatorNumber = data.operatorNumber;
@@ -254,14 +259,14 @@ void TextFilter::printCashOut(int event, CashCommand& data){
     }
 }
 
-void TextFilter::printHeader(int event, PasswordCommand& data){
+void TextFilter::printHeader(uint8_t event, PasswordCommand& data){
     (void)data;
     if (event == EVENT_AFTER){
         addHeader();
     }
 }
 
-void TextFilter::printDocEnd(int event, PrintDocEndCommand& data){
+void TextFilter::printDocEnd(uint8_t event, PrintDocEndCommand& data){
     (void)data;
     if (event == EVENT_AFTER){
         addTrailer();
@@ -293,7 +298,7 @@ void TextFilter::printReceiptItem(ReceiptItemCommand& data)
     add(buffer.sprintf("%d", data.department), line);
 }
 
-void TextFilter::printSale(int event, ReceiptItemCommand& data)
+void TextFilter::printSale(uint8_t event, ReceiptItemCommand& data)
 {
     if (event == EVENT_AFTER){
         qDebug() << "TextFilter::printSale";
@@ -303,7 +308,7 @@ void TextFilter::printSale(int event, ReceiptItemCommand& data)
     }
 }
 
-void TextFilter::printBuy(int event, ReceiptItemCommand& data){
+void TextFilter::printBuy(uint8_t event, ReceiptItemCommand& data){
     if (event == EVENT_AFTER){
         operatorNumber = data.operatorNumber;
         openReceipt2(SMFP_RECTYPE_BUY);
@@ -311,7 +316,7 @@ void TextFilter::printBuy(int event, ReceiptItemCommand& data){
     }
 }
 
-void TextFilter::printRetSale(int event, ReceiptItemCommand& data){
+void TextFilter::printRetSale(uint8_t event, ReceiptItemCommand& data){
     if (event == EVENT_AFTER){
         operatorNumber = data.operatorNumber;
         openReceipt2(SMFP_RECTYPE_RETSALE);
@@ -319,7 +324,7 @@ void TextFilter::printRetSale(int event, ReceiptItemCommand& data){
     }
 }
 
-void TextFilter::printRetBuy(int event, ReceiptItemCommand& data){
+void TextFilter::printRetBuy(uint8_t event, ReceiptItemCommand& data){
     if (event == EVENT_AFTER){
         operatorNumber = data.operatorNumber;
         openReceipt2(SMFP_RECTYPE_RETBUY);
@@ -327,14 +332,14 @@ void TextFilter::printRetBuy(int event, ReceiptItemCommand& data){
     }
 }
 
-void TextFilter::printTrailer(int event, PasswordCommand& data){
+void TextFilter::printTrailer(uint8_t event, PasswordCommand& data){
     (void)data;
     if (event == EVENT_AFTER){
         addTrailer();
     }
 }
 
-void TextFilter::printStorno(int event, ReceiptItemCommand& data)
+void TextFilter::printStorno(uint8_t event, ReceiptItemCommand& data)
 {
     if (event == EVENT_AFTER){
         operatorNumber = data.operatorNumber;
@@ -351,7 +356,7 @@ void TextFilter::printStorno(int event, ReceiptItemCommand& data)
     }
 }
 
-void TextFilter::closeReceipt(int event, CloseReceiptCommand& data)
+void TextFilter::closeReceipt(uint8_t event, CloseReceiptCommand& data)
 {
     if (event == EVENT_AFTER){
         receiptOpened = false;
@@ -393,33 +398,33 @@ void TextFilter::closeReceipt(int event, CloseReceiptCommand& data)
         if (data.change > 0)
             add(SChangeText, summToStr(data.change));
 
+        addDocMac();
         addFiscalSign();
-        readEJReport(true);
         endDocument();
     }
 }
 
-void TextFilter::printDiscount(int event, AmountAjustCommand& data){
+void TextFilter::printDiscount(uint8_t event, AmountAjustCommand& data){
     if (event == EVENT_AFTER){
         add(data.text);
         add(SDiscountText, summToStr(data.amount));
     }
 }
 
-void TextFilter::printCharge(int event, AmountAjustCommand& data){
+void TextFilter::printCharge(uint8_t event, AmountAjustCommand& data){
     if (event == EVENT_AFTER){
         add(data.text);
         add(SChargeText, summToStr(data.amount));
     }
 }
 
-void TextFilter::printAmountAjustment(int event, int code, AmountAjustCommand& data){
+void TextFilter::printAmountAjustment(uint8_t event, int code, AmountAjustCommand& data){
     (void)(event);
     (void)(code);
     (void)(data);
 }
 
-void TextFilter::cancelReceipt(int event, PasswordCommand& data){
+void TextFilter::cancelReceipt(uint8_t event, PasswordCommand& data){
     (void)data;
     if (event == EVENT_AFTER){
         receiptOpened = false;
@@ -428,26 +433,42 @@ void TextFilter::cancelReceipt(int event, PasswordCommand& data){
     }
 }
 
-void TextFilter::printDiscountStorno(int event, AmountAjustCommand& data){
+void TextFilter::printDiscountStorno(uint8_t event, AmountAjustCommand& data){
     if (event == EVENT_AFTER){
         add(data.text);
         add(SDiscountStornoText, summToStr(data.amount));
     }
 }
 
-void TextFilter::printChargeStorno(int event, AmountAjustCommand& data){
+void TextFilter::printChargeStorno(uint8_t event, AmountAjustCommand& data){
     if (event == EVENT_AFTER){
         add(data.text);
         add(SChargeStornoText, summToStr(data.amount));
     }
 }
 
-void TextFilter::printCopy(int event, PasswordCommand& data){
+void TextFilter::printCopy(uint8_t event, PasswordCommand& data){
     (void)(event);
     (void)(data);
 }
 
-void TextFilter::openReceipt(int event, OpenReceiptCommand& data){
+void TextFilter::openDay(uint8_t event, PasswordCommand& data){
+    if (event == EVENT_AFTER)
+    {
+        ReadLongStatusCommand status;
+        printer->readLongStatus(status);
+        dayNumber = status.dayNumber;
+
+        beginDocument();
+        add(SDayOpenReport);
+        add("НОМЕР СМЕНЫ", dayNumber);
+        addDocMac();
+        addCenter("*", SDayOpened);
+        endDocument();
+    }
+}
+
+void TextFilter::openReceipt(uint8_t event, OpenReceiptCommand& data){
     if (event == EVENT_AFTER){
         openReceipt2(data.receiptType);
     }
@@ -476,27 +497,41 @@ void TextFilter::beginDocument()
 void TextFilter::endDocument()
 {
     addTrailer();
+    addCenter("-", "-");
 }
 
 void TextFilter::addReceiptHeader()
 {
-    ReadLongStatusCommand status;
+    QString line1 = "";
+    QString line2 = "";
+
     printer->check(printer->readLongStatus(status));
     int documentNumber = status.documentNumber;
     if (!isDocumentPrinted){
         documentNumber += 1;
     }
-    // ККМ
-    QString line1 = deviceName + buffer.sprintf("%.16d", status.serialNumber);
-    QString line2 = buffer.sprintf("ИНН %.12lld #%.4d", status.fiscalID, documentNumber);
+
+    // РН ККТ
+    line1 = "РН ККТ:" + printer->readParameter(FPTR_PARAMETER_REG_NUMBER);
+    line2 = buffer.sprintf("%.2d.%.2d.%.2d %.2d:%.2d",
+        status.date.day, status.date.month, status.date.year,
+        status.time.hour, status.time.min);
     add(line1, line2);
 
-    // Кассир
-    PrinterDate date = status.date;
-    PrinterTime time = status.time;
-    QString s = buffer.sprintf("%.2d.%.2d.%.2d %.2d:%.2d",
-        date.day, date.month, date.year, time.hour, time.min);
-    add(s, getOperatorName());
+    // ЗН ККТ
+    line1 = "ЗН ККТ:" + printer->readParameter(FPTR_PARAMETER_SERIAL_NUMBER);
+    line2 = buffer.sprintf("СМЕНА:%d", dayNumber);
+    add(line1, line2);
+
+    // ИНН - ФН
+    line1 = "ИНН:" + printer->readParameter(FPTR_PARAMETER_FISCAL_ID);
+    line2 = "ФН:" + printer->readParameter(FPTR_PARAMETER_FS_SERIAL_NUMBER);
+    add(line1, line2);
+
+    // Кассир - document number
+    line1 = "Кассир:" + getOperatorName();
+    line2 = buffer.sprintf("#%.4d", documentNumber);
+    add(line1, line2);
 }
 
 QString TextFilter::getOperatorName()
@@ -635,6 +670,31 @@ uint16_t TextFilter::getNextRecNumber(uint16_t recNumber)
         recNumber = 1;
     }
     return recNumber;
+}
+
+void TextFilter::addDocMac()
+{
+    if (isEJPresent)
+    {
+        if (isFiscal) readEJReport(true);
+    } else{
+        readFSReport();
+    }
+}
+
+void TextFilter::readFSReport()
+{
+    FSStatus status;
+    if (printer->fsReadStatus(status) == 0)
+    {
+        FSFindDocument data;
+        data.docNum = status.docNumber;
+        if (printer->fsFindDocument(data) == 0)
+        {
+            long docMac = printer->getDocumentMac(data);
+            add(buffer.sprintf("ФД:%u ФП:%u", status.docNumber, docMac));
+        }
+    }
 }
 
 void TextFilter::readEJReport(bool isReceipt)

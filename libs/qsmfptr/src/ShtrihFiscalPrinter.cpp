@@ -27,6 +27,8 @@
 #include <tlvlist.h>
 #include "JournalPrinter.h"
 #include "TextFilter.h"
+#include "XInputStream.h"
+
 
 bool CsvTablesReader::isComment(QString line) {
     return line.startsWith("//");
@@ -135,7 +137,6 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent)
     numTrailerRow = 1;
     numHeaderLines = 4;
     numTrailerLines = 3;
-    filter = new PrinterFilter();
     stopFlag = false;
     pollInterval = 1000; // 1000 ms
     fdoThreadEnabled = false;
@@ -144,6 +145,7 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent)
     userName = "";
     sleepTimeInMs = 1000;
     journal = new JournalPrinter("journal.txt");
+    filter = new PrinterFilter();
 }
 
 ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
@@ -153,15 +155,21 @@ ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
     delete journal;
 }
 
+bool ShtrihFiscalPrinter::getJournalEnabled(){
+    return journalEnabled;
+}
+
 void ShtrihFiscalPrinter::setJournalEnabled(bool value)
 {
+    journalEnabled = value;
     if (value)
     {
         TextFilter* filter = new TextFilter(this);
         filter->setFileName(journal->getFileName());
         setFilter(filter);
-    } else{
-        setFilter(NULL);
+    } else
+    {
+        setFilter(new PrinterFilter());
     }
 }
 
@@ -357,6 +365,10 @@ void ShtrihFiscalPrinter::connectDevice()
     qDebug() << "capPrintGraphics1: " << capPrintGraphics1;
     qDebug() << "capPrintGraphics2: " << capPrintGraphics2;
     qDebug() << "capPrintGraphics3: " << capPrintGraphics3;
+}
+
+bool ShtrihFiscalPrinter::isShtrihMobile(){
+    return deviceType.model == 19;
 }
 
 void ShtrihFiscalPrinter::disconnectDevice()
@@ -4200,6 +4212,7 @@ int ShtrihFiscalPrinter::openDay(PasswordCommand& data)
     data.resultCode = send(command);
     if (succeeded(data.resultCode)){
         data.operatorNumber = command.readChar();
+        filter->openDay(EVENT_AFTER, data);
     }
     return data.resultCode;
 }
@@ -5511,6 +5524,12 @@ QString ShtrihFiscalPrinter::readTable(int table, int row, int field)
     return result;
 }
 
+int ShtrihFiscalPrinter::readTableInt(int table, int row, int field)
+{
+    QString text = readTable(table, row, field);
+    return text.toInt();
+}
+
 QStringList ShtrihFiscalPrinter::readHeader(){
 
     QStringList header;
@@ -5521,11 +5540,20 @@ QStringList ShtrihFiscalPrinter::readHeader(){
     return header;
 }
 
-QStringList ShtrihFiscalPrinter::readTrailer(){
+bool ShtrihFiscalPrinter::readTrailerEnabled()
+{
+    return readTableInt(1, 1, 3) != 0;
+}
+
+QStringList ShtrihFiscalPrinter::readTrailer()
+{
     QStringList trailer;
-    for (int i = 0; i < numTrailerLines; i++)
+    if (readTrailerEnabled())
     {
-        trailer.append(readTable(SMFP_TABLE_TEXT, i + numTrailerRow, 1));
+        for (int i = 0; i < numTrailerLines; i++)
+        {
+            trailer.append(readTable(SMFP_TABLE_TEXT, i + numTrailerRow, 1));
+        }
     }
     return trailer;
 }
@@ -5833,7 +5861,44 @@ int ShtrihFiscalPrinter::fsFindDocument(FSFindDocument& data){
     {
         data.docType = command.read8();
         data.hasTicket = command.read8();
-        data.ticket = command.readBytes();
+        data.docData = command.readBytes();
+        switch (data.docType)
+        {
+            case 1:
+                data.document1 = decodeDocument1(data.docData);
+                break;
+
+            case 2:
+                data.document2 = decodeDocument2(data.docData);
+                break;
+
+            case 3:
+                data.document3 = decodeDocument3(data.docData);
+                break;
+
+            case 4:
+                data.document3 = decodeDocument3(data.docData);
+                break;
+
+            case 5:
+                data.document2 = decodeDocument2(data.docData);
+                break;
+            case 6:
+                data.document6 = decodeDocument6(data.docData);
+                break;
+
+            case 11:
+                data.document11 = decodeDocument11(data.docData);
+                break;
+
+            case 21:
+                data.document21 = decodeDocument21(data.docData);
+                break;
+
+            case 31:
+                data.document3 = decodeDocument3(data.docData);
+                break;
+        }
     }
     return data.resultCode;
 }
@@ -6792,11 +6857,33 @@ int ShtrihFiscalPrinter::readTotals(PrinterTotals& data){
     return data.resultCode;
 }
 
-void ShtrihFiscalPrinter::printLines(QStringList lines){
+void ShtrihFiscalPrinter::printLines(QStringList lines)
+{
+    qDebug() << "printLines";
+    bool journalEnabled = getJournalEnabled();
+    setJournalEnabled(false);
+    try{
+        for (int i=0;i<lines.length();i++){
+            check(printLine(lines.at(i)));
+        }
+    }
+    catch(QException exception)
+    {
+        setJournalEnabled(journalEnabled);
+        throw exception;
+    }
+    setJournalEnabled(journalEnabled);
+}
+
+/*
+void ShtrihFiscalPrinter::printLines(QStringList lines)
+{
+    qDebug() << "printLines";
     for (int i=0;i<lines.length();i++){
         check(printLine(lines.at(i)));
     }
 }
+*/
 
 void ShtrihFiscalPrinter::jrnPrintAll()
 {
@@ -6823,4 +6910,162 @@ void ShtrihFiscalPrinter::jrnPrintDocRange(int N1, int N2)
     printLines(getJournal()->readDocRange(N1, N2));
 }
 
+QString ShtrihFiscalPrinter::readParameter(int ParamId)
+{
+    switch (ParamId)
+    {
+        case FPTR_PARAMETER_REG_NUMBER:
+        if (regNumber.isEmpty())
+        {
+            if (isShtrihMobile()){
+                regNumber = readTable(14,1,3);
+            } else {
+                regNumber = readTable(18,1,3);
+            }
+        }
+        return regNumber;
 
+        case FPTR_PARAMETER_SERIAL_NUMBER:
+        if (serialNumber.isEmpty())
+        {
+            if (isShtrihMobile()){
+                serialNumber = readTable(14,1,1);
+            } else{
+                serialNumber = readTable(18,1,1);
+            }
+        }
+        return serialNumber;
+
+        case FPTR_PARAMETER_FISCAL_ID:
+        if (fiscalID.isEmpty())
+        {
+            if (isShtrihMobile()){
+                fiscalID = readTable(14,1,2);
+            } else{
+                fiscalID = readTable(18,1,2);
+            }
+        }
+        return fiscalID;
+
+        case FPTR_PARAMETER_FS_SERIAL_NUMBER:
+        if (fsSerialNumber.isEmpty())
+        {
+            if (isShtrihMobile()){
+                fsSerialNumber = readTable(14,1,4);
+            } else{
+                fsSerialNumber = readTable(18,1,4);
+            }
+        }
+        return fsSerialNumber;
+    }
+}
+
+FSDocument1 ShtrihFiscalPrinter::decodeDocument1(QByteArray data)
+{
+
+    qDebug() << "decodeDocument1: " << data.size() << ": " << StringUtils::dataToHex(data);
+
+    FSDocument1 doc;
+    XInputStream stream;
+    stream.setBuffer(data);
+    doc.date = stream.readDate2();
+    doc.time = stream.readTime2();
+    doc.docNum = stream.read32();
+    doc.docMac = stream.read32();
+    doc.taxID = stream.readStr(12);
+    doc.regNumber = stream.readStr(20);
+    doc.taxType = stream.read8();
+    doc.workMode = stream.read8();
+    return doc;
+}
+
+FSDocument2 ShtrihFiscalPrinter::decodeDocument2(QByteArray data)
+{
+    FSDocument2 doc;
+    XInputStream stream;
+    stream.setBuffer(data);
+    doc.date = stream.readDate2();
+    doc.time = stream.readTime2();
+    doc.docNum = stream.read32();
+    doc.docMac = stream.read32();
+    doc.dayNum = stream.read16();
+    return doc;
+}
+
+FSDocument3 ShtrihFiscalPrinter::decodeDocument3(QByteArray data)
+{
+    FSDocument3 doc;
+    XInputStream stream;
+    stream.setBuffer(data);
+    doc.date = stream.readDate2();
+    doc.time = stream.readTime2();
+    doc.docNum = stream.read32();
+    doc.docMac = stream.read32();
+    doc.operationType = stream.read8();
+    doc.amount = stream.read(5);
+    return doc;
+}
+
+FSDocument6 ShtrihFiscalPrinter::decodeDocument6(QByteArray data)
+{
+    FSDocument6 doc;
+    XInputStream stream;
+    stream.setBuffer(data);
+    doc.date = stream.readDate2();
+    doc.time = stream.readTime2();
+    doc.docNum = stream.read32();
+    doc.docMac = stream.read32();
+    doc.taxID = stream.readStr(12);
+    doc.regNumber = stream.readStr(20);
+    return doc;
+}
+
+FSDocument11 ShtrihFiscalPrinter::decodeDocument11(QByteArray data)
+{
+    FSDocument11 doc;
+    XInputStream stream;
+    stream.setBuffer(data);
+    doc.date = stream.readDate2();
+    doc.time = stream.readTime2();
+    doc.docNum = stream.read32();
+    doc.docMac = stream.read32();
+    doc.taxID = stream.readStr(12);
+    doc.regNumber = stream.readStr(20);
+    doc.taxType = stream.read8();
+    doc.workMode = stream.read8();
+    doc.reasonCode = stream.read8();
+    return doc;
+}
+
+FSDocument21 ShtrihFiscalPrinter::decodeDocument21(QByteArray data)
+{
+    FSDocument21 doc;
+    XInputStream stream;
+    stream.setBuffer(data);
+    doc.date = stream.readDate2();
+    doc.time = stream.readTime2();
+    doc.docNum = stream.read32();
+    doc.docMac = stream.read32();
+    doc.docCount = stream.read16();
+    doc.docDate = stream.readDate2();
+    doc.docTime = stream.readTime2();
+    return doc;
+}
+
+uint32_t ShtrihFiscalPrinter::getDocumentMac(FSFindDocument doc)
+{
+    qDebug() << "getDocumentMac";
+    switch (doc.docType)
+    {
+        case 1: return doc.document1.docMac;
+        case 2: return doc.document2.docMac;
+        case 3: return doc.document3.docMac;
+        case 4: return doc.document3.docMac;
+        case 5: return doc.document2.docMac;
+        case 6: return doc.document6.docMac;
+        case 11: return doc.document11.docMac;
+        case 21: return doc.document21.docMac;
+        case 31: return doc.document3.docMac;
+        default: return 0;
+    }
+}

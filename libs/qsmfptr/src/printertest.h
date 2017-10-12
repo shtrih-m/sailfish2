@@ -33,6 +33,7 @@ private:
     void sendBlocks();
     void testSprintf();
     void connectPrinter();
+    void disconnectPrinter();
     void readFileTest();
     void check(int rc);
     void beep();
@@ -58,7 +59,9 @@ private:
     void printImage(QImage image);
     void waitForDocuments();
     void testFile();
+    void testTextFile();
     void printReceiptCopy();
+    void readLastDocMac();
 };
 
 #endif // PRINTERTEST_H

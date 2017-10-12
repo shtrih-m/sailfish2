@@ -31,30 +31,81 @@ void PrinterTest::execute()
     qDebug("PrinterTest::execute");
 
     try {
+
         JournalPrinter journal("journal.txt");
-        //journal.deleteFile();
+        journal.deleteFile();
 
+        connectPrinter();
+        printZReport();
+        printSaleReceipt();
+        disconnectPrinter();
+        journal.show(journal.readAll());
+
+        // journal.show(journal.readDay(17));
+        // journal.show(journal.readCurrentDay());
         //journal.show(journal.readDay(5));
-        journal.show(journal.readDoc(121));
-        journal.show(journal.readDoc(122));
-        journal.show(journal.readDocRange(121, 122));
-
-
-        //connectPrinter();
-        //printSaleReceipt();
-        //journal.readAll();
-
-        //printZReport();
+        //journal.show(journal.readDoc(121));
+        //journal.show(journal.readDoc(122));
+        //journal.show(journal.readDocRange(121, 122));
 
         //printer.jrnPrintAll();
         //printer.jrnPrintDoc(114);
         //printer.jrnPrintCurrentDay();
         //printer.jrnPrintDay(1);
         //printer.jrnPrintDocRange(107, 109);
-        //printer.disconnectDevice();
-        //qDebug("Printer disconnected!");
+        //disconnectPrinter();
     } catch (PortException e) {
         qDebug() << e.getText();
+    }
+}
+
+void PrinterTest::readLastDocMac()
+{
+    FSStatus status;
+    printer.check(printer.fsReadStatus(status));
+    FSFindDocument document;
+    document.docNum = status.docNumber;
+    printer.check(printer.fsFindDocument(document));
+    qDebug() << "FindDocument: " << StringUtils::dataToHex(document.docData);
+    qDebug() << "document.docType: " << document.docType;
+    long docMac = printer.getDocumentMac(document);
+    QString text;
+    text.sprintf("ФД:%u ФПД:%u", status.docNumber, docMac);
+    qDebug() << text;
+}
+
+void PrinterTest::testTextFile()
+{
+    qDebug() << "testTextFile";
+    QString fileName = "test.txt";
+    QFile file(fileName);
+    file.remove();
+    if (file.open(QIODevice::ReadWrite | QIODevice::Text))
+    {
+        QTextStream stream(&file);
+        stream.setCodec("UTF-8");
+        QString line = "Строка 1";
+        stream << line.toUtf8() << endl;
+        line = "";
+        stream << line.toUtf8() << endl;
+        line = "Строка 2";
+        stream << line.toUtf8() << endl;
+        line = "Строка 3";
+        stream << line.toUtf8() << endl;
+        file.close();
+    }
+
+    QFile file1(fileName);
+    if (file1.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream stream(&file1);
+        stream.setCodec("UTF-8");
+        while (!stream.atEnd())
+        {
+            QString line = stream.readLine();
+            qDebug() << line;
+        }
+        file1.close();
     }
 }
 
@@ -282,6 +333,12 @@ void PrinterTest::connectPrinter()
     printer.setJournalEnabled(true);
     printer.connectDevice();
     qDebug("Printer connected!");
+}
+
+void PrinterTest::disconnectPrinter()
+{
+    printer.disconnectDevice();
+    qDebug("Printer disconnected!");
 }
 
 void PrinterTest::readFileTest()
@@ -657,6 +714,7 @@ void PrinterTest::printSaleReceipt()
     //itemText += "Line2\r";
     //itemText += "Line3\n";
     //itemText += "Line401234567890123456789012345678901234567890123456789";
+
 
     ReceiptItemCommand itemCommand;
     itemCommand.quantity = 1000;

@@ -27,6 +27,14 @@
 #include "JournalPrinter.h"
 
 // ////////////////////////////////////////////////////////////////////////
+// Parameter ID
+
+#define FPTR_PARAMETER_REG_NUMBER           0
+#define FPTR_PARAMETER_SERIAL_NUMBER        1
+#define FPTR_PARAMETER_FISCAL_ID            2
+#define FPTR_PARAMETER_FS_SERIAL_NUMBER     3
+
+// ////////////////////////////////////////////////////////////////////////
 // Field types
 
 #define FIELD_TYPE_INT  0
@@ -1042,13 +1050,84 @@ struct FSPrintFiscalization{
     uint32_t docMac;            // out, Фискальный признак: 4 байта
 };
 
+struct FSDocument1
+{
+    PrinterDate date;
+    PrinterTime time;
+    uint32_t docNum;
+    uint32_t docMac;
+    QString taxID;
+    QString regNumber;
+    uint8_t taxType;
+    uint8_t workMode;
+};
+
+struct FSDocument11
+{
+    PrinterDate date;
+    PrinterTime time;
+    uint64_t docNum;
+    uint64_t docMac;
+    QString taxID;
+    QString regNumber;
+    uint8_t taxType;
+    uint8_t workMode;
+    uint8_t reasonCode;
+};
+
+struct FSDocument6
+{
+    PrinterDate date;
+    PrinterTime time;
+    uint64_t docNum;
+    uint64_t docMac;
+    QString taxID;
+    QString regNumber;
+};
+
+struct FSDocument2
+{
+    PrinterDate date;
+    PrinterTime time;
+    uint64_t docNum;
+    uint64_t docMac;
+    uint32_t dayNum;
+};
+
+struct FSDocument3
+{
+    PrinterDate date;
+    PrinterTime time;
+    uint64_t docNum;
+    uint64_t docMac;
+    uint8_t operationType;
+    uint64_t amount;
+};
+
+struct FSDocument21
+{
+    PrinterDate date;
+    PrinterTime time;
+    uint64_t docNum;
+    uint64_t docMac;
+    uint32_t docCount;
+    PrinterDate docDate;
+    PrinterTime docTime;
+};
+
 struct FSFindDocument
 {
     uint32_t docNum;            // in, Номер фискального документа: 4 байта
     uint8_t resultCode;         // out, Код ошибки: 1 байт
     uint8_t docType;            // out, Тип фискального документа: 1 байт
     uint8_t hasTicket;          // out, Получена ли квитанция из ОФД: 1 байт
-    QByteArray ticket;          // out, Данные фискального документа
+    QByteArray docData;         // out, Данные фискального документа
+    FSDocument1 document1;
+    FSDocument2 document2;
+    FSDocument3 document3;
+    FSDocument6 document6;
+    FSDocument11 document11;
+    FSDocument21 document21;
 };
 
 struct FSOpenDay{
@@ -1579,6 +1658,8 @@ public:
 class PrinterFilter: public IPrinterFilter
 {
 public:
+    PrinterFilter(){}
+
     virtual void startDump(int event, StartDumpCommand& data)
     {
         (void)event;
@@ -2037,12 +2118,14 @@ public:
     explicit ShtrihFiscalPrinter(QObject* parent = 0);
     virtual ~ShtrihFiscalPrinter();
     void setTimeout(int value);
+    bool getJournalEnabled();
     void setJournalEnabled(bool value);
     int send(PrinterCommand& command);
     void connectDevice();
     void disconnectDevice();
     bool succeeded(int rc);
     bool failed(int rc);
+    bool isShtrihMobile();
     int startDump(StartDumpCommand& data);
     int readDump(ReadDumpCommand& data);
     int stopDump(StopDumpCommand& data);
@@ -2203,10 +2286,12 @@ public:
     uint64_t readCashRegister(uint8_t number);
     uint16_t readOperationRegister(uint8_t number);
     QString readTable(int table, int row, int field);
+    int readTableInt(int table, int row, int field);
     void check(int resultCode);
     QStringList readHeader();
     QStringList readTrailer();
     QString readPaymentName(int number);
+    bool readTrailerEnabled();
 
     int printEJDepartmentReportOnDates(PrintEJDepartmentReportOnDates& data);
     int printEJDepartmentReportOnDays(PrintEJDepartmentReportOnDays& data);
@@ -2306,6 +2391,15 @@ public:
     void jrnPrintDay(int dayNumber);
     void jrnPrintDoc(int docNumber);
     void jrnPrintDocRange(int N1, int N2);
+    QString readParameter(int ParamId);
+
+    uint32_t getDocumentMac(FSFindDocument doc);
+    FSDocument1 decodeDocument1(QByteArray data);
+    FSDocument2 decodeDocument2(QByteArray data);
+    FSDocument3 decodeDocument3(QByteArray data);
+    FSDocument6 decodeDocument6(QByteArray data);
+    FSDocument11 decodeDocument11(QByteArray data);
+    FSDocument21 decodeDocument21(QByteArray data);
 private:
     QMutex* mutex;
     TlvTags tlvTags;
@@ -2339,6 +2433,11 @@ private:
     QString userName;
     DeviceTypeCommand deviceType;
     JournalPrinter* journal;
+    bool journalEnabled;
+    QString fiscalID;
+    QString regNumber;
+    QString serialNumber;
+    QString fsSerialNumber;
 public:
     int sleepTimeInMs;
     bool userNameEnabled;

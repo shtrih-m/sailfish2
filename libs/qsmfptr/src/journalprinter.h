@@ -23,12 +23,14 @@ public:
     QStringList readCurrentDay();
     QStringList readDay(int dayNumber);
     QStringList readDoc(int docNumber);
+    QStringList strip(QStringList lines);
     QStringList readDocRange(int N1, int N2);
 
     int getDayNumber(QString line);
     QStringList getDocument(int docNumber);
     QStringList searchZReport(int dayNumber);
 
+    bool isDocumentSeparator(QString line);
     bool isDocumentHeader(QString line);
     int getDocumentNumber(QString line);
     int findNextDocument(QStringList lines, int index);

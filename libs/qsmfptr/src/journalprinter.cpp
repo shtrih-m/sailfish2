@@ -83,25 +83,30 @@ QStringList JournalPrinter::readDocRange(int N1, int N2)
 
 QStringList JournalPrinter::readAll()
 {
-    qDebug() << "readAll()";
-
+    qDebug() << "readAll()" << lines.size();
     if (lines.size() == 0)
     {
         QFile file(fileName);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text))
-        {
-            file.seek(0);
-            QTextStream stream(&file);
-            stream.setCodec("UTF-8");
-            for (;;)
+        if (file.exists()){
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text))
             {
-                QString line = stream.readLine();
-                qDebug() << "LINE: " << line;
-
-                if (line == NULL) break;
-                lines.append(line);
+                file.seek(0);
+                QTextStream stream(&file);
+                stream.setCodec("UTF-8");
+                while (!stream.atEnd())
+                {
+                    QString line = stream.readLine();
+                    qDebug() << "LINE: " << line;
+                    lines.append(line);
+                }
+                file.close();
+            } else
+            {
+                qDebug() << "Failed to open file";
             }
-            file.close();
+        } else
+        {
+            qDebug() << "File is not exists";
         }
     }
     return lines;
@@ -118,6 +123,11 @@ int JournalPrinter::getDocumentNumber(QString line)
     return -1;
 }
 
+bool JournalPrinter::isDocumentSeparator(QString line)
+{
+    return line.contains("----------");
+}
+
 bool JournalPrinter::isDocumentHeader(QString line)
 {
     return line.contains("ИНН");
@@ -128,7 +138,7 @@ int JournalPrinter::findNextDocument(QStringList lines, int index)
     for (int i = index; i < lines.size(); i++)
     {
         QString line = lines.at(i);
-        if (isDocumentHeader(line)) {
+        if (isDocumentSeparator(line)) {
             return i;
         }
     }
@@ -174,11 +184,12 @@ QStringList JournalPrinter::copyLines(
         QStringList lines, int index1, int index2)
 {
     QStringList result;
-    for (int i = index1; i <= index2; i++) {
-        if (i < 0)
-            return result;
-        if (i >= lines.length())
-            return result;
+    if (index1 < 0) index1 = 0;
+    if (index1 >= lines.size()) return result;
+    if (index2 >= lines.size()) index2 = lines.size()-1;
+
+    for (int i = index1; i <= index2; i++)
+    {
         result.append(lines.at(i));
     }
     return result;
@@ -240,7 +251,19 @@ QStringList JournalPrinter::readCurrentDay()
     {
         index1 = 0;
     }
-    return copyLines(lines, index1, lines.size());
+    return strip(copyLines(lines, index1, lines.size()));
+}
+
+QStringList JournalPrinter::strip(QStringList lines)
+{
+    QStringList result;
+    for (int i=0;i<lines.size();i++)
+    { QString line = lines.at(i);
+        if (!isDocumentSeparator(line)){
+            result.append(line);
+        }
+    }
+    return result;
 }
 
 void JournalPrinter::show(QStringList lines)
@@ -251,4 +274,3 @@ void JournalPrinter::show(QStringList lines)
         qDebug() << "SHOW: " << lines.at(i);
     }
 }
-
