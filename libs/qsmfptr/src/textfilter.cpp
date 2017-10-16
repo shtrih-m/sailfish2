@@ -78,6 +78,7 @@ TextFilter::TextFilter(ShtrihFiscalPrinter* aprinter)
     docNames[2] = SRetSaleText;
     docNames[3] = SRetBuyText;
     fileName = "journal.txt";
+    receiptOpened = false;
 }
 
 QString TextFilter::getFileName(){
@@ -275,6 +276,7 @@ void TextFilter::printDocEnd(uint8_t event, PrintDocEndCommand& data){
 
 void TextFilter::openReceipt2(int receiptType)
 {
+    qDebug() << "openReceipt2";
     if (!receiptOpened)
     {
         receiptOpened = true;
@@ -452,16 +454,25 @@ void TextFilter::printCopy(uint8_t event, PasswordCommand& data){
     (void)(data);
 }
 
-void TextFilter::openDay(uint8_t event, PasswordCommand& data){
-    if (event == EVENT_AFTER)
+void TextFilter::openDay(uint8_t event, PasswordCommand& data)
+{
+    (void)data;
+
+    if (event == EVENT_BEFORE)
     {
         ReadLongStatusCommand status;
         printer->readLongStatus(status);
-        dayNumber = status.dayNumber;
+        dayNumber = status.dayNumber + 1;
+        if (dayNumber == 10000){
+            dayNumber = 9999;
+        }
+    }
 
+    if (event == EVENT_AFTER)
+    {
         beginDocument();
         add(SDayOpenReport);
-        add("НОМЕР СМЕНЫ", dayNumber);
+        add("НОМЕР СМЕНЫ", StringUtils::intToStr(dayNumber));
         addDocMac();
         addCenter("*", SDayOpened);
         endDocument();
@@ -489,6 +500,8 @@ void TextFilter::addTrailer()
 
 void TextFilter::beginDocument()
 {
+    qDebug() << "beginDocument";
+
     connect();
     addHeader();
     addReceiptHeader();
@@ -502,6 +515,8 @@ void TextFilter::endDocument()
 
 void TextFilter::addReceiptHeader()
 {
+    qDebug() << "addReceiptHeader";
+
     QString line1 = "";
     QString line2 = "";
 
@@ -691,7 +706,7 @@ void TextFilter::readFSReport()
         data.docNum = status.docNumber;
         if (printer->fsFindDocument(data) == 0)
         {
-            long docMac = printer->getDocumentMac(data);
+            uint32_t docMac = printer->getDocumentMac(data);
             add(buffer.sprintf("ФД:%u ФП:%u", status.docNumber, docMac));
         }
     }

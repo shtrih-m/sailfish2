@@ -59,6 +59,7 @@ public:
     int decode(QByteArray data);
     QByteArray getTxBuffer();
     QByteArray getRxBuffer();
+    QByteArray getRxData();
     void setBuffer(QByteArray data);
 
     uint16_t getCode();
@@ -68,6 +69,7 @@ public:
 private:
     uint16_t code;
     int pos;
+    QByteArray rxdata;
     QByteArray txbuffer;
     QByteArray rxbuffer;
     QTextCodec* codec;

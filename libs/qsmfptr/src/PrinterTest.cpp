@@ -31,18 +31,17 @@ void PrinterTest::execute()
     qDebug("PrinterTest::execute");
 
     try {
-
-        JournalPrinter journal("journal.txt");
-        journal.deleteFile();
+        //JournalPrinter journal("journal.txt");
+        //journal.show(journal.readAll());
+        //journal.deleteFile();
 
         connectPrinter();
-        printZReport();
-        printSaleReceipt();
+        printText();
         disconnectPrinter();
-        journal.show(journal.readAll());
 
-        // journal.show(journal.readDay(17));
-        // journal.show(journal.readCurrentDay());
+
+        //journal.show(journal.readDay(17));
+        //journal.show(journal.readCurrentDay());
         //journal.show(journal.readDay(5));
         //journal.show(journal.readDoc(121));
         //journal.show(journal.readDoc(122));
@@ -59,6 +58,12 @@ void PrinterTest::execute()
     }
 }
 
+void PrinterTest::printText()
+{
+    QString text = "Line_01234567890123456789012345678901234567890123456789\r\n0123456789012345678901234567890123456789012345678901234567890123456789";
+    printer.printText(text);
+}
+
 void PrinterTest::readLastDocMac()
 {
     FSStatus status;
@@ -68,11 +73,12 @@ void PrinterTest::readLastDocMac()
     printer.check(printer.fsFindDocument(document));
     qDebug() << "FindDocument: " << StringUtils::dataToHex(document.docData);
     qDebug() << "document.docType: " << document.docType;
-    long docMac = printer.getDocumentMac(document);
+    uint32_t docMac = printer.getDocumentMac(document);
     QString text;
     text.sprintf("ФД:%u ФПД:%u", status.docNumber, docMac);
     qDebug() << text;
 }
+
 
 void PrinterTest::testTextFile()
 {

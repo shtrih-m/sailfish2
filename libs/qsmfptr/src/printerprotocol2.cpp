@@ -4,6 +4,8 @@
 #include "utils.h"
 #include <QDataStream>
 #include <QDebug>
+#include "DebugUtils.h"
+
 
 const uint8_t STX = 0x8F;
 const uint8_t ESC = 0x9F;
@@ -121,7 +123,8 @@ void PrinterProtocol2::synchronizeFrames(int timeout)
     for (int i = 0; i < maxRepeatCount; i++) {
         try {
             QByteArray ba;
-            port->writeBytes(frame.encode(ba));
+            ba = frame.encode(ba);
+            port->writeBytes(ba);
             frame.setNumber(readAnswer(true));
             isSynchronized = true;
             frame.incNumber();
@@ -137,7 +140,8 @@ int PrinterProtocol2::send(PrinterCommand& command)
 {
     int retryNum = 1;
     port->setReadTimeout(command.getTimeout());
-    port->writeBytes(frame.encode(command.encode()));
+    QByteArray ba = frame.encode(command.encode());
+    port->writeBytes(ba);
     int frameNum = readAnswer(false);
     if (frameNum != frame.getNumber()) {
         if ((retryNum != 1) && (frameNum == (frame.getNumber() - 1))) {
@@ -181,6 +185,7 @@ int PrinterProtocol2::readAnswer(bool sync)
             stream.writeShort(len);
             stream.writeShort(num);
             stream.writeBytes(rx);
+
             uint16_t frameCrc = frame.getCRC(stream.getBuffer());
             if (crc != frameCrc) {
                 qDebug() << "Invalid CRC !!!";

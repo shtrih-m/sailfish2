@@ -1562,97 +1562,97 @@ class IPrinterFilter
 {
 public:
     virtual ~IPrinterFilter() {}
-    virtual void startDump(int event, StartDumpCommand& data)=0;
-    virtual void readDump(int event, ReadDumpCommand& data)=0;
-    virtual void stopDump(int event, StopDumpCommand& data)=0;
-    virtual void fiscalization(int event, FiscalizationCommand& data)=0;
-    virtual void fiscalizationLong(int event, FiscalizationCommand& data)=0;
-    virtual void writeLongSerial(int event, WriteLongSerialCommand& data)=0;
-    virtual void readLongSerial(int event, ReadLongSerialCommand& data)=0;
-    virtual void readShortStatus(int event, ReadShortStatusCommand& data)=0;
-    virtual void readLongStatus(int event, ReadLongStatusCommand& data)=0;
-    virtual void printBold(int event, PrintBoldCommand& data)=0;
-    virtual void beep(int event, BeepCommand& data)=0;
-    virtual void writePortParameters(int event, PortParametersCommand& data)=0;
-    virtual void readPortParameters(int event, PortParametersCommand& data)=0;
-    virtual void resetMemory(int event)=0;
-    virtual void printString(int event, PrintStringCommand& data)=0;
-    virtual void printDocHeader(int event, PrintDocHeaderCommand& data)=0;
-    virtual void startTest(int event, StartTestCommand& data)=0;
-    virtual void readRegister(int event, ReadCashRegCommand& data)=0;
-    virtual void readRegister(int event, ReadOperRegCommand& data)=0;
-    virtual void writeLicense(int event, LicenseCommand& data)=0;
-    virtual void readLicense(int event, LicenseCommand& data)=0;
-    virtual void writeTable(int event, TableValueCommand& data)=0;
-    virtual void readTable(int event, TableValueCommand& data)=0;
-    virtual void writePoint(int event, PointCommand& command)=0;
-    virtual void writeTime(int event, TimeCommand& data)=0;
-    virtual void writeDate(int event, DateCommand& data)=0;
-    virtual void confirmDate(int event, DateCommand& data)=0;
-    virtual void cutPaper(int event, CutCommand& data)=0;
-    virtual void readFont(int event, ReadFontCommand& data)=0;
-    virtual void openDrawer(int event, OpenDrawerCommand& data)=0;
-    virtual void feedPaper(int event, FeedPaperCommand& data)=0;
-    virtual void stopTest(int event, PasswordCommand& data)=0;
-    virtual void printStringFont(int event, PrintStringFontCommand& data)=0;
-    virtual void printXReport(int event, PasswordCommand& data)=0;
-    virtual void printZReport(int event, PasswordCommand& data)=0;
-    virtual void printDepartmentReport(int event, PasswordCommand& data)=0;
-    virtual void printTaxReport(int event, PasswordCommand& data)=0;
-    virtual void printCashIn(int event, CashCommand& data)=0;
-    virtual void printCashOut(int event, CashCommand& data)=0;
-    virtual void printHeader(int event, PasswordCommand& data)=0;
-    virtual void printDocEnd(int event, PrintDocEndCommand& data)=0;
-    virtual void printSale(int event, ReceiptItemCommand& data)=0;
-    virtual void printBuy(int event, ReceiptItemCommand& data)=0;
-    virtual void printRetSale(int event, ReceiptItemCommand& data)=0;
-    virtual void printRetBuy(int event, ReceiptItemCommand& data)=0;
-    virtual void printTrailer(int event, PasswordCommand& data)=0;
-    virtual void printStorno(int event, ReceiptItemCommand& data)=0;
-    virtual void closeReceipt(int event, CloseReceiptCommand& data)=0;
-    virtual void printDiscount(int event, AmountAjustCommand& data)=0;
-    virtual void printCharge(int event, AmountAjustCommand& data)=0;
-    virtual void cancelReceipt(int event, PasswordCommand& data)=0;
-    virtual void readSubtotal(int event, ReadSubtotalCommand& data)=0;
-    virtual void printDiscountStorno(int event, AmountAjustCommand& data)=0;
-    virtual void printChargeStorno(int event, AmountAjustCommand& data)=0;
-    virtual void printCopy(int event, PasswordCommand& data)=0;
-    virtual void openReceipt(int event, OpenReceiptCommand& data)=0;
-    virtual void continuePrint(int event, PasswordCommand& data)=0;
-    virtual void printBarcode(int event, PrintBarcodeCommand& data)=0;
-    virtual void printGraphics(int event, PrintGraphicsCommand& data)=0;
-    virtual void printGraphics1(int event, PrintGraphicsCommand& data)=0;
-    virtual void printGraphics2(int event, PrintGraphicsCommand& data)=0;
-    virtual void loadGraphics(int event, LoadGraphicsCommand& data)=0;
-    virtual void loadGraphics1(int event, LoadGraphicsCommand& data)=0;
-    virtual void loadGraphics2(int event, LoadGraphicsCommand& data)=0;
-    virtual void printGraphicsLine(int event, GraphicsLineCommand& data)=0;
-    virtual void openDay(int event, PasswordCommand& data)=0;
-    virtual void readDeviceType(int event, DeviceTypeCommand& data)=0;
-    virtual void printScaledGraphics(int event, ScaledGraphicsCommand& data)=0;
-    virtual void softReset(int event)=0;
-    virtual void initTables(int event, PasswordCommand& data)=0;
-    virtual void slipEject(int event, SlipEjectCommand& data)=0;
-    virtual void printRegisters(int event, PasswordCommand& data)=0;
-    virtual void readTableInfo(int event, TableInfoCommand& data)=0;
-    virtual void readFieldInfo(int event, FieldInfoCommand& data)=0;
-    virtual void writeSerial(int event, WriteSerialCommand& data)=0;
-    virtual void resetFM(int event, int& resultCode)=0;
-    virtual void fmReadTotals(int event, FMReadTotalsCommand& data)=0;
-    virtual void fsReadTotals(int event, FSReadTotalsCommand& data)=0;
-    virtual void fsReadDocCount(int event, int& docCount)=0;
+    virtual void startDump(uint8_t event, StartDumpCommand& data)=0;
+    virtual void readDump(uint8_t event, ReadDumpCommand& data)=0;
+    virtual void stopDump(uint8_t event, StopDumpCommand& data)=0;
+    virtual void fiscalization(uint8_t event, FiscalizationCommand& data)=0;
+    virtual void fiscalizationLong(uint8_t event, FiscalizationCommand& data)=0;
+    virtual void writeLongSerial(uint8_t event, WriteLongSerialCommand& data)=0;
+    virtual void readLongSerial(uint8_t event, ReadLongSerialCommand& data)=0;
+    virtual void readShortStatus(uint8_t event, ReadShortStatusCommand& data)=0;
+    virtual void readLongStatus(uint8_t event, ReadLongStatusCommand& data)=0;
+    virtual void printBold(uint8_t event, PrintBoldCommand& data)=0;
+    virtual void beep(uint8_t event, BeepCommand& data)=0;
+    virtual void writePortParameters(uint8_t event, PortParametersCommand& data)=0;
+    virtual void readPortParameters(uint8_t event, PortParametersCommand& data)=0;
+    virtual void resetMemory(uint8_t event)=0;
+    virtual void printString(uint8_t event, PrintStringCommand& data)=0;
+    virtual void printDocHeader(uint8_t event, PrintDocHeaderCommand& data)=0;
+    virtual void startTest(uint8_t event, StartTestCommand& data)=0;
+    virtual void readRegister(uint8_t event, ReadCashRegCommand& data)=0;
+    virtual void readRegister(uint8_t event, ReadOperRegCommand& data)=0;
+    virtual void writeLicense(uint8_t event, LicenseCommand& data)=0;
+    virtual void readLicense(uint8_t event, LicenseCommand& data)=0;
+    virtual void writeTable(uint8_t event, TableValueCommand& data)=0;
+    virtual void readTable(uint8_t event, TableValueCommand& data)=0;
+    virtual void writePoint(uint8_t event, PointCommand& command)=0;
+    virtual void writeTime(uint8_t event, TimeCommand& data)=0;
+    virtual void writeDate(uint8_t event, DateCommand& data)=0;
+    virtual void confirmDate(uint8_t event, DateCommand& data)=0;
+    virtual void cutPaper(uint8_t event, CutCommand& data)=0;
+    virtual void readFont(uint8_t event, ReadFontCommand& data)=0;
+    virtual void openDrawer(uint8_t event, OpenDrawerCommand& data)=0;
+    virtual void feedPaper(uint8_t event, FeedPaperCommand& data)=0;
+    virtual void stopTest(uint8_t event, PasswordCommand& data)=0;
+    virtual void printStringFont(uint8_t event, PrintStringFontCommand& data)=0;
+    virtual void printXReport(uint8_t event, PasswordCommand& data)=0;
+    virtual void printZReport(uint8_t event, PasswordCommand& data)=0;
+    virtual void printDepartmentReport(uint8_t event, PasswordCommand& data)=0;
+    virtual void printTaxReport(uint8_t event, PasswordCommand& data)=0;
+    virtual void printCashIn(uint8_t event, CashCommand& data)=0;
+    virtual void printCashOut(uint8_t event, CashCommand& data)=0;
+    virtual void printHeader(uint8_t event, PasswordCommand& data)=0;
+    virtual void printDocEnd(uint8_t event, PrintDocEndCommand& data)=0;
+    virtual void printSale(uint8_t event, ReceiptItemCommand& data)=0;
+    virtual void printBuy(uint8_t event, ReceiptItemCommand& data)=0;
+    virtual void printRetSale(uint8_t event, ReceiptItemCommand& data)=0;
+    virtual void printRetBuy(uint8_t event, ReceiptItemCommand& data)=0;
+    virtual void printTrailer(uint8_t event, PasswordCommand& data)=0;
+    virtual void printStorno(uint8_t event, ReceiptItemCommand& data)=0;
+    virtual void closeReceipt(uint8_t event, CloseReceiptCommand& data)=0;
+    virtual void printDiscount(uint8_t event, AmountAjustCommand& data)=0;
+    virtual void printCharge(uint8_t event, AmountAjustCommand& data)=0;
+    virtual void cancelReceipt(uint8_t event, PasswordCommand& data)=0;
+    virtual void readSubtotal(uint8_t event, ReadSubtotalCommand& data)=0;
+    virtual void printDiscountStorno(uint8_t event, AmountAjustCommand& data)=0;
+    virtual void printChargeStorno(uint8_t event, AmountAjustCommand& data)=0;
+    virtual void printCopy(uint8_t event, PasswordCommand& data)=0;
+    virtual void openReceipt(uint8_t event, OpenReceiptCommand& data)=0;
+    virtual void continuePrint(uint8_t event, PasswordCommand& data)=0;
+    virtual void printBarcode(uint8_t event, PrintBarcodeCommand& data)=0;
+    virtual void printGraphics(uint8_t event, PrintGraphicsCommand& data)=0;
+    virtual void printGraphics1(uint8_t event, PrintGraphicsCommand& data)=0;
+    virtual void printGraphics2(uint8_t event, PrintGraphicsCommand& data)=0;
+    virtual void loadGraphics(uint8_t event, LoadGraphicsCommand& data)=0;
+    virtual void loadGraphics1(uint8_t event, LoadGraphicsCommand& data)=0;
+    virtual void loadGraphics2(uint8_t event, LoadGraphicsCommand& data)=0;
+    virtual void printGraphicsLine(uint8_t event, GraphicsLineCommand& data)=0;
+    virtual void openDay(uint8_t event, PasswordCommand& data)=0;
+    virtual void readDeviceType(uint8_t event, DeviceTypeCommand& data)=0;
+    virtual void printScaledGraphics(uint8_t event, ScaledGraphicsCommand& data)=0;
+    virtual void softReset(uint8_t event)=0;
+    virtual void initTables(uint8_t event, PasswordCommand& data)=0;
+    virtual void slipEject(uint8_t event, SlipEjectCommand& data)=0;
+    virtual void printRegisters(uint8_t event, PasswordCommand& data)=0;
+    virtual void readTableInfo(uint8_t event, TableInfoCommand& data)=0;
+    virtual void readFieldInfo(uint8_t event, FieldInfoCommand& data)=0;
+    virtual void writeSerial(uint8_t event, WriteSerialCommand& data)=0;
+    virtual void resetFM(uint8_t event, int& resultCode)=0;
+    virtual void fmReadTotals(uint8_t event, FMReadTotalsCommand& data)=0;
+    virtual void fsReadTotals(uint8_t event, FSReadTotalsCommand& data)=0;
+    virtual void fsReadDocCount(uint8_t event, int& docCount)=0;
 
-    virtual void fmReadLastDate(int event, FMReadLastDateCommand& data)=0;
-    virtual void fmReadRange(int event, FMReadRangeCommand& data)=0;
-    virtual void fmDatesReport(int event, FMDatesReportCommand& data)=0;
-    virtual void fmDaysReport(int event, FMDaysReportCommand& data)=0;
-    virtual void fmCancelReport(int event, PasswordCommand& data)=0;
-    virtual void fmReadFiscalization(int event, FMReadFiscalizationCommand& data)=0;
-    virtual void slipOpenDocument(int event, SlipOpenDocumentCommand& data)=0;
-    virtual void slipOpenStdDocument(int event, SlipOpenStdDocumentCommand& data)=0;
-    virtual void slipPrintItem(int event, SlipPrintItemCommand& data)=0;
-    virtual void loadGraphics3(int event, LoadGraphics3Command& data)=0;
-    virtual void printGraphics3(int event, PrintGraphics3Command& data)=0;
+    virtual void fmReadLastDate(uint8_t event, FMReadLastDateCommand& data)=0;
+    virtual void fmReadRange(uint8_t event, FMReadRangeCommand& data)=0;
+    virtual void fmDatesReport(uint8_t event, FMDatesReportCommand& data)=0;
+    virtual void fmDaysReport(uint8_t event, FMDaysReportCommand& data)=0;
+    virtual void fmCancelReport(uint8_t event, PasswordCommand& data)=0;
+    virtual void fmReadFiscalization(uint8_t event, FMReadFiscalizationCommand& data)=0;
+    virtual void slipOpenDocument(uint8_t event, SlipOpenDocumentCommand& data)=0;
+    virtual void slipOpenStdDocument(uint8_t event, SlipOpenStdDocumentCommand& data)=0;
+    virtual void slipPrintItem(uint8_t event, SlipPrintItemCommand& data)=0;
+    virtual void loadGraphics3(uint8_t event, LoadGraphics3Command& data)=0;
+    virtual void printGraphics3(uint8_t event, PrintGraphics3Command& data)=0;
 };
 
 class PrinterFilter: public IPrinterFilter
@@ -1660,452 +1660,452 @@ class PrinterFilter: public IPrinterFilter
 public:
     PrinterFilter(){}
 
-    virtual void startDump(int event, StartDumpCommand& data)
+    virtual void startDump(uint8_t event, StartDumpCommand& data)
     {
         (void)event;
         (void)data;
     }
 
-    virtual void readDump(int event, ReadDumpCommand& data)    {
+    virtual void readDump(uint8_t event, ReadDumpCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void stopDump(int event, StopDumpCommand& data)    {
+    virtual void stopDump(uint8_t event, StopDumpCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fiscalization(int event, FiscalizationCommand& data)    {
+    virtual void fiscalization(uint8_t event, FiscalizationCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fiscalizationLong(int event, FiscalizationCommand& data)    {
+    virtual void fiscalizationLong(uint8_t event, FiscalizationCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void writeLongSerial(int event, WriteLongSerialCommand& data)    {
+    virtual void writeLongSerial(uint8_t event, WriteLongSerialCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readLongSerial(int event, ReadLongSerialCommand& data)    {
+    virtual void readLongSerial(uint8_t event, ReadLongSerialCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readShortStatus(int event, ReadShortStatusCommand& data)    {
+    virtual void readShortStatus(uint8_t event, ReadShortStatusCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readLongStatus(int event, ReadLongStatusCommand& data)    {
+    virtual void readLongStatus(uint8_t event, ReadLongStatusCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printBold(int event, PrintBoldCommand& data)    {
+    virtual void printBold(uint8_t event, PrintBoldCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void beep(int event, BeepCommand& data)    {
+    virtual void beep(uint8_t event, BeepCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void writePortParameters(int event, PortParametersCommand& data)    {
+    virtual void writePortParameters(uint8_t event, PortParametersCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readPortParameters(int event, PortParametersCommand& data)    {
+    virtual void readPortParameters(uint8_t event, PortParametersCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void resetMemory(int event)    {
+    virtual void resetMemory(uint8_t event)    {
         (void)event;
     }
 
-    virtual void printString(int event, PrintStringCommand& data)    {
+    virtual void printString(uint8_t event, PrintStringCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printDocHeader(int event, PrintDocHeaderCommand& data)    {
+    virtual void printDocHeader(uint8_t event, PrintDocHeaderCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void startTest(int event, StartTestCommand& data)    {
+    virtual void startTest(uint8_t event, StartTestCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readRegister(int event, ReadCashRegCommand& data)    {
+    virtual void readRegister(uint8_t event, ReadCashRegCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readRegister(int event, ReadOperRegCommand& data)    {
+    virtual void readRegister(uint8_t event, ReadOperRegCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void writeLicense(int event, LicenseCommand& data)    {
+    virtual void writeLicense(uint8_t event, LicenseCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readLicense(int event, LicenseCommand& data)    {
+    virtual void readLicense(uint8_t event, LicenseCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void writeTable(int event, TableValueCommand& data)    {
+    virtual void writeTable(uint8_t event, TableValueCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readTable(int event, TableValueCommand& data)    {
+    virtual void readTable(uint8_t event, TableValueCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void writePoint(int event, PointCommand& data)    {
+    virtual void writePoint(uint8_t event, PointCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void writeTime(int event, TimeCommand& data)    {
+    virtual void writeTime(uint8_t event, TimeCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void writeDate(int event, DateCommand& data)    {
+    virtual void writeDate(uint8_t event, DateCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void confirmDate(int event, DateCommand& data)    {
+    virtual void confirmDate(uint8_t event, DateCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void cutPaper(int event, CutCommand& data)    {
+    virtual void cutPaper(uint8_t event, CutCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readFont(int event, ReadFontCommand& data)    {
+    virtual void readFont(uint8_t event, ReadFontCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void openDrawer(int event, OpenDrawerCommand& data)    {
+    virtual void openDrawer(uint8_t event, OpenDrawerCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void feedPaper(int event, FeedPaperCommand& data)    {
+    virtual void feedPaper(uint8_t event, FeedPaperCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void stopTest(int event, PasswordCommand& data)    {
+    virtual void stopTest(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printStringFont(int event, PrintStringFontCommand& data)    {
+    virtual void printStringFont(uint8_t event, PrintStringFontCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printXReport(int event, PasswordCommand& data)    {
+    virtual void printXReport(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printZReport(int event, PasswordCommand& data)    {
+    virtual void printZReport(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printDepartmentReport(int event, PasswordCommand& data)    {
+    virtual void printDepartmentReport(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printTaxReport(int event, PasswordCommand& data)    {
+    virtual void printTaxReport(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printCashIn(int event, CashCommand& data)    {
+    virtual void printCashIn(uint8_t event, CashCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printCashOut(int event, CashCommand& data)    {
+    virtual void printCashOut(uint8_t event, CashCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printHeader(int event, PasswordCommand& data)    {
+    virtual void printHeader(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printDocEnd(int event, PrintDocEndCommand& data)    {
+    virtual void printDocEnd(uint8_t event, PrintDocEndCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printSale(int event, ReceiptItemCommand& data)    {
+    virtual void printSale(uint8_t event, ReceiptItemCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printBuy(int event, ReceiptItemCommand& data)    {
+    virtual void printBuy(uint8_t event, ReceiptItemCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printRetSale(int event, ReceiptItemCommand& data)    {
+    virtual void printRetSale(uint8_t event, ReceiptItemCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printRetBuy(int event, ReceiptItemCommand& data)    {
+    virtual void printRetBuy(uint8_t event, ReceiptItemCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printTrailer(int event, PasswordCommand& data)    {
+    virtual void printTrailer(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printStorno(int event, ReceiptItemCommand& data)    {
+    virtual void printStorno(uint8_t event, ReceiptItemCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void closeReceipt(int event, CloseReceiptCommand& data)    {
+    virtual void closeReceipt(uint8_t event, CloseReceiptCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printDiscount(int event, AmountAjustCommand& data)    {
+    virtual void printDiscount(uint8_t event, AmountAjustCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printCharge(int event, AmountAjustCommand& data)    {
+    virtual void printCharge(uint8_t event, AmountAjustCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void cancelReceipt(int event, PasswordCommand& data)    {
+    virtual void cancelReceipt(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readSubtotal(int event, ReadSubtotalCommand& data)    {
+    virtual void readSubtotal(uint8_t event, ReadSubtotalCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printDiscountStorno(int event, AmountAjustCommand& data)    {
+    virtual void printDiscountStorno(uint8_t event, AmountAjustCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printChargeStorno(int event, AmountAjustCommand& data)    {
+    virtual void printChargeStorno(uint8_t event, AmountAjustCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printCopy(int event, PasswordCommand& data)    {
+    virtual void printCopy(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void openReceipt(int event, OpenReceiptCommand& data)    {
+    virtual void openReceipt(uint8_t event, OpenReceiptCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void continuePrint(int event, PasswordCommand& data)    {
+    virtual void continuePrint(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printBarcode(int event, PrintBarcodeCommand& data)    {
+    virtual void printBarcode(uint8_t event, PrintBarcodeCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printGraphics(int event, PrintGraphicsCommand& data)    {
+    virtual void printGraphics(uint8_t event, PrintGraphicsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printGraphics1(int event, PrintGraphicsCommand& data)    {
+    virtual void printGraphics1(uint8_t event, PrintGraphicsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printGraphics2(int event, PrintGraphicsCommand& data)    {
+    virtual void printGraphics2(uint8_t event, PrintGraphicsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void loadGraphics(int event, LoadGraphicsCommand& data)    {
+    virtual void loadGraphics(uint8_t event, LoadGraphicsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void loadGraphics1(int event, LoadGraphicsCommand& data)    {
+    virtual void loadGraphics1(uint8_t event, LoadGraphicsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void loadGraphics2(int event, LoadGraphicsCommand& data)    {
+    virtual void loadGraphics2(uint8_t event, LoadGraphicsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printGraphicsLine(int event, GraphicsLineCommand& data)    {
+    virtual void printGraphicsLine(uint8_t event, GraphicsLineCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void openDay(int event, PasswordCommand& data)    {
+    virtual void openDay(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readDeviceType(int event, DeviceTypeCommand& data)    {
+    virtual void readDeviceType(uint8_t event, DeviceTypeCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printScaledGraphics(int event, ScaledGraphicsCommand& data)    {
+    virtual void printScaledGraphics(uint8_t event, ScaledGraphicsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void softReset(int event)    {
+    virtual void softReset(uint8_t event)    {
         (void)event;
     }
 
-    virtual void initTables(int event, PasswordCommand& data)    {
+    virtual void initTables(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void slipEject(int event, SlipEjectCommand& data)    {
+    virtual void slipEject(uint8_t event, SlipEjectCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printRegisters(int event, PasswordCommand& data)    {
+    virtual void printRegisters(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readTableInfo(int event, TableInfoCommand& data)    {
+    virtual void readTableInfo(uint8_t event, TableInfoCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void readFieldInfo(int event, FieldInfoCommand& data)    {
+    virtual void readFieldInfo(uint8_t event, FieldInfoCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void writeSerial(int event, WriteSerialCommand& data)    {
+    virtual void writeSerial(uint8_t event, WriteSerialCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void resetFM(int event, int& resultCode)    {
+    virtual void resetFM(uint8_t event, int& resultCode)    {
         (void)event;
         (void)resultCode;
     }
 
-    virtual void fmReadTotals(int event, FMReadTotalsCommand& data)    {
+    virtual void fmReadTotals(uint8_t event, FMReadTotalsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fsReadTotals(int event, FSReadTotalsCommand& data)    {
+    virtual void fsReadTotals(uint8_t event, FSReadTotalsCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fsReadDocCount(int event, int& docCount)    {
+    virtual void fsReadDocCount(uint8_t event, int& docCount)    {
         (void)event;
         (void)docCount;
     }
 
 
-    virtual void fmReadLastDate(int event, FMReadLastDateCommand& data)    {
+    virtual void fmReadLastDate(uint8_t event, FMReadLastDateCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fmReadRange(int event, FMReadRangeCommand& data)    {
+    virtual void fmReadRange(uint8_t event, FMReadRangeCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fmDatesReport(int event, FMDatesReportCommand& data)    {
+    virtual void fmDatesReport(uint8_t event, FMDatesReportCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fmDaysReport(int event, FMDaysReportCommand& data)    {
+    virtual void fmDaysReport(uint8_t event, FMDaysReportCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fmCancelReport(int event, PasswordCommand& data)    {
+    virtual void fmCancelReport(uint8_t event, PasswordCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void fmReadFiscalization(int event, FMReadFiscalizationCommand& data)    {
+    virtual void fmReadFiscalization(uint8_t event, FMReadFiscalizationCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void slipOpenDocument(int event, SlipOpenDocumentCommand& data)    {
+    virtual void slipOpenDocument(uint8_t event, SlipOpenDocumentCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void slipOpenStdDocument(int event, SlipOpenStdDocumentCommand& data)    {
+    virtual void slipOpenStdDocument(uint8_t event, SlipOpenStdDocumentCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void slipPrintItem(int event, SlipPrintItemCommand& data)    {
+    virtual void slipPrintItem(uint8_t event, SlipPrintItemCommand& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void loadGraphics3(int event, LoadGraphics3Command& data)    {
+    virtual void loadGraphics3(uint8_t event, LoadGraphics3Command& data)    {
         (void)event;
         (void)data;
     }
 
-    virtual void printGraphics3(int event, PrintGraphics3Command& data)    {
+    virtual void printGraphics3(uint8_t event, PrintGraphics3Command& data)    {
         (void)event;
         (void)data;
     }
@@ -2272,7 +2272,8 @@ public:
     int readLineLength(int font);
     int getLineLength(int font);
     int printLine(QString text);
-    int printText(QString& text);
+    int printTextSplit(QString& text);
+    int printText(QString text);
     QStringList splitText(QString text, int font);
     int resetPrinter();
     bool isDayOpened();

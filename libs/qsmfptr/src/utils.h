@@ -16,6 +16,12 @@ public:
         return ba.toHex().toUpper();
     }
 
+    static QString intToStr(uint64_t value)
+    {
+        QString text;
+        return text.sprintf("%llu", value);
+    }
+
     static QString dataToHex(QByteArray ba)
     {
         QString result;

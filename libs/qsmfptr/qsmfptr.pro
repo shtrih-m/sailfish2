@@ -40,7 +40,8 @@ HEADERS += \
     src/tlvlist.h \
     src/tlvtag.h \
     src/journalprinter.h \
-    src/xinputstream.h
+    src/xinputstream.h \
+    src/debugutils.h
 
 SOURCES += \
     src/MemStream.cpp \
@@ -58,7 +59,8 @@ SOURCES += \
     src/tlvlist.cpp \
     src/tlvtag.cpp \
     src/journalprinter.cpp \
-    src/xinputstream.cpp
+    src/xinputstream.cpp \
+    src/debugutils.cpp
 
 HEADERS +=  src/zint/aztec.h \
             src/zint/code49.h \

@@ -62,6 +62,7 @@ private:
     void testTextFile();
     void printReceiptCopy();
     void readLastDocMac();
+    void printText();
 };
 
 #endif // PRINTERTEST_H

@@ -28,6 +28,7 @@
 #include "JournalPrinter.h"
 #include "TextFilter.h"
 #include "XInputStream.h"
+#include "DebugUtils.h"
 
 
 bool CsvTablesReader::isComment(QString line) {
@@ -161,6 +162,8 @@ bool ShtrihFiscalPrinter::getJournalEnabled(){
 
 void ShtrihFiscalPrinter::setJournalEnabled(bool value)
 {
+    qDebug() << "setJournalEnabled: " << value;
+
     journalEnabled = value;
     if (value)
     {
@@ -230,6 +233,8 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
             qDebug() << "retry " << i;
         }
 
+        DebugUtils::writeTx(command.encode());
+
         lock();
         try{
             rc = protocol->send(command);
@@ -240,6 +245,7 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
             unlock();
             exception.raise();
         }
+        DebugUtils::writeRx(command.getRxData());
         if (rc == 0) break;
 
         qDebug() << "ERROR:  " << getErrorText2(rc);
@@ -2843,7 +2849,7 @@ QStringList ShtrihFiscalPrinter::splitText(QString text, int font)
     return list;
 }
 
-int ShtrihFiscalPrinter::printText(QString& text)
+int ShtrihFiscalPrinter::printTextSplit(QString& text)
 {
     int rc = 0;
     QStringList lines = splitText(text, 1);
@@ -2860,9 +2866,23 @@ int ShtrihFiscalPrinter::printText(QString& text)
     return rc;
 }
 
+int ShtrihFiscalPrinter::printText(QString text)
+{
+    int rc = 0;
+    QStringList lines = splitText(text, 1);
+    foreach (const QString &str, lines) {
+        if (str.isEmpty())
+            break;
+
+        rc = printLine(str);
+        if (rc != 0) break;
+    }
+    return rc;
+}
+
 int ShtrihFiscalPrinter::execute(int code, ReceiptItemCommand& data)
 {
-    data.resultCode = printText(data.text);
+    data.resultCode = printTextSplit(data.text);
     if (failed(data.resultCode)) {
         return data.resultCode;
     }
@@ -4206,6 +4226,8 @@ int ShtrihFiscalPrinter::printGraphicsLine(GraphicsLineCommand& data)
 int ShtrihFiscalPrinter::openDay(PasswordCommand& data)
 {
     qDebug() << "openDay";
+
+    filter->openDay(EVENT_BEFORE, data);
 
     PrinterCommand command(0xE0);
     command.write(usrPassword, 4);
@@ -6957,14 +6979,12 @@ QString ShtrihFiscalPrinter::readParameter(int ParamId)
             }
         }
         return fsSerialNumber;
+    default: return "";
     }
 }
 
 FSDocument1 ShtrihFiscalPrinter::decodeDocument1(QByteArray data)
 {
-
-    qDebug() << "decodeDocument1: " << data.size() << ": " << StringUtils::dataToHex(data);
-
     FSDocument1 doc;
     XInputStream stream;
     stream.setBuffer(data);

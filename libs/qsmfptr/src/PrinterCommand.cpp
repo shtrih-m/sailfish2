@@ -49,6 +49,9 @@ void PrinterCommand::warn(int resultCode)
 
 int PrinterCommand::decode(QByteArray data)
 {
+    rxdata.clear();
+    rxdata.append(data);
+
     int resultCode = 0;
     uint16_t rxCode = data.at(0);
     if (rxCode == 0xFF){
@@ -79,6 +82,11 @@ QByteArray PrinterCommand::getTxBuffer()
 QByteArray PrinterCommand::getRxBuffer()
 {
     return rxbuffer;
+}
+
+QByteArray PrinterCommand::getRxData()
+{
+    return rxdata;
 }
 
 void PrinterCommand::setBuffer(QByteArray data)

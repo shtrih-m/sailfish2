@@ -108,7 +108,6 @@ QByteArray SocketPort::readBytes(int count)
             throw new PortException("Timeout error");
         }
     }
-    qDebug() << "<- " << StringUtils::dataToHex(packet);
     return packet;
 }
 
@@ -121,8 +120,6 @@ void SocketPort::writeByte(char data)
 
 void SocketPort::writeBytes(const QByteArray& data)
 {
-    qDebug() << "-> " << StringUtils::dataToHex(data);
-
     connectToDevice();
     socket.write(data);
     if (!socket.waitForBytesWritten(writeTimeout)) {

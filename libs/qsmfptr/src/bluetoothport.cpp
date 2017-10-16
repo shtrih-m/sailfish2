@@ -128,7 +128,6 @@ QByteArray BluetoothPort::readBytes(int count)
             throw new PortException("Timeout error");
         }
     }
-    qDebug() << "<- " << StringUtils::dataToHex(packet);
     return packet;
 }
 
@@ -141,8 +140,6 @@ void BluetoothPort::writeByte(char data)
 
 void BluetoothPort::writeBytes(const QByteArray& data)
 {
-    qDebug() << "-> " << StringUtils::dataToHex(data);
-
     connectToDevice();
     socket->write(data);
 }

@@ -23,7 +23,7 @@ public:
     {
     }
 
-    QString getText()
+    QString getText() const
     {
         return text;
     }
