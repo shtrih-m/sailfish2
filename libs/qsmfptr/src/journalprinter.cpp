@@ -31,7 +31,7 @@ void JournalPrinter::deleteFile(){
 
 QStringList JournalPrinter::readDay(int dayNumber)
 {
-    qDebug() << "readDay";
+    qDebug() << "readDay(" << dayNumber << ")";
 
     QStringList dst = searchZReport(dayNumber);
     QString header;
@@ -42,7 +42,7 @@ QStringList JournalPrinter::readDay(int dayNumber)
 
 QStringList JournalPrinter::readDoc(int docNumber)
 {
-    qDebug() << "readDoc";
+    qDebug() << "readDoc(" << docNumber << ")";
 
     QStringList dst = getDocument(docNumber);
     QString header;
@@ -53,7 +53,7 @@ QStringList JournalPrinter::readDoc(int docNumber)
 
 QStringList JournalPrinter::readDocRange(int N1, int N2)
 {
-    qDebug() << "readDocRange";
+    qDebug() << "readDocRange(" << N1 << ", " << N2 << ")";
 
     if (N1 > N2)
     {
@@ -114,7 +114,7 @@ QStringList JournalPrinter::readAll()
 
 int JournalPrinter::getDocumentNumber(QString line)
 {
-    if (line.contains("ИНН") && line.contains("#"))
+    if (line.contains("#"))
     {
         int startIndex = line.indexOf("#") + 1;
         QString number = line.mid(startIndex, 4);
@@ -145,6 +145,18 @@ int JournalPrinter::findNextDocument(QStringList lines, int index)
     return lines.size();
 }
 
+int JournalPrinter::findPrevDocument(QStringList lines, int index)
+{
+    for (int i = index; i >= 0; i--)
+    {
+        QString line = lines.at(i);
+        if (isDocumentSeparator(line)) {
+            return i+1;
+        }
+    }
+    return 0;
+}
+
 QStringList JournalPrinter::getDocument(int docNumber)
 {
     int index1 = -1;
@@ -165,7 +177,7 @@ QStringList JournalPrinter::getDocument(int docNumber)
             if (index2 != -1)
                 index2 -= 1;
 
-            index1 = i;
+            index1 = findPrevDocument(lines, i);
             break;
         }
     }
@@ -192,66 +204,51 @@ QStringList JournalPrinter::copyLines(
     {
         result.append(lines.at(i));
     }
-    return result;
+    return strip(result);
 }
 
 QStringList JournalPrinter::searchZReport(int dayNumber){
     QStringList lines = readAll();
-    int index1 = 0;
+    int index1 = -1;
+    int index2 = -1;
 
     for (int i = 0; i < lines.size(); i++) {
         QString line = lines.at(i);
 
         int dayNum = getDayNumber(line);
-        if (dayNum == -1)
-            continue;
+        if (dayNum == -1) continue;
 
-        if (dayNum == dayNumber) {
-            int index2 = findNextDocument(lines, i + 1);
-            if (index2 != -1)
-                index2 -= 1;
-
-            return copyLines(lines, index1, index2);
-        } else {
-            index1 = findNextDocument(lines, i + 1);
+        if ((dayNum == dayNumber)&&(index1 == -1)) {
+            index1 = findPrevDocument(lines, i);
+        }
+        if ((dayNum == (dayNumber + 1))&&(index2 == -1)) {
+            index2 = findPrevDocument(lines, i);
+            break;
         }
     }
-    QString text;
-    text.sprintf("Смена № %d не найдена", dayNumber);
-    qDebug() << text;
-    throw new TextException(text);
+    if (index1 == -1){
+        QString text;
+        text.sprintf("Смена № %d не найдена", dayNumber);
+        qDebug() << text;
+        throw new TextException(text);
+    }
+    if (index2 == -1) {
+        index2 = lines.size()-1;
+    }
+    return copyLines(lines, index1, index2);
 }
 
 int JournalPrinter::getDayNumber(QString line)
 {
-    if (line.contains(SZReportText))
+    int index = line.indexOf("СМЕНА:");
+    if (index >= 0)
     {
-        int startIndex = line.length() - 4;
-        QString number = line.mid(startIndex, startIndex + 4);
+        index = index + 6;
+        QString number = line.mid(index, line.length()-index);
+        qDebug() << "getDayNumber: " << number.toInt();
         return number.toInt();
     }
     return -1;
-}
-
-QStringList JournalPrinter::readCurrentDay()
-{
-    QStringList lines = readAll();
-    int index1 = 0;
-
-    for (int i = 0; i < lines.length(); i++) {
-        QString line = lines.at(i);
-
-        int dayNum = getDayNumber(line);
-        if (dayNum == -1)
-            continue;
-
-        index1 = findNextDocument(lines, i + 1);
-    }
-    if (index1 == -1)
-    {
-        index1 = 0;
-    }
-    return strip(copyLines(lines, index1, lines.size()));
 }
 
 QStringList JournalPrinter::strip(QStringList lines)

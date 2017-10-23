@@ -220,7 +220,7 @@ void TextFilter::printZReport(uint8_t event, PasswordCommand& data)
     if (event == EVENT_BEFORE){
         xreport = readXReport();
     } else{
-        beginDocument();
+        beginDocument(true);
         add(SZReportText, buffer.sprintf("№%.4d", xreport.zReportNumber));
         addXZReport(xreport);
         addDocMac();
@@ -236,7 +236,6 @@ QString TextFilter::getDocumentNumber(uint16_t value) {
 void TextFilter::printCashIn(uint8_t event, CashCommand& data)
 {
     if (event == EVENT_AFTER){
-        isDocumentPrinted = true;
         operatorNumber = data.operatorNumber;
         uint16_t docNumber = printer->readOperationRegister(155);
 
@@ -249,7 +248,6 @@ void TextFilter::printCashIn(uint8_t event, CashCommand& data)
 
 void TextFilter::printCashOut(uint8_t event, CashCommand& data){
     if (event == EVENT_AFTER){
-        isDocumentPrinted = true;
         operatorNumber = data.operatorNumber;
         uint64_t docNumber = printer->readOperationRegister(156);
 
@@ -280,7 +278,6 @@ void TextFilter::openReceipt2(int receiptType)
     if (!receiptOpened)
     {
         receiptOpened = true;
-        isDocumentPrinted = false;
         beginDocument();
         uint16_t recNumber = getNextRecNumber(getRecNumber(receiptType));
         add(docNames[receiptType], buffer.sprintf("№%.4d", recNumber));
@@ -458,21 +455,10 @@ void TextFilter::openDay(uint8_t event, PasswordCommand& data)
 {
     (void)data;
 
-    if (event == EVENT_BEFORE)
-    {
-        ReadLongStatusCommand status;
-        printer->readLongStatus(status);
-        dayNumber = status.dayNumber + 1;
-        if (dayNumber == 10000){
-            dayNumber = 9999;
-        }
-    }
-
     if (event == EVENT_AFTER)
     {
         beginDocument();
         add(SDayOpenReport);
-        add("НОМЕР СМЕНЫ", StringUtils::intToStr(dayNumber));
         addDocMac();
         addCenter("*", SDayOpened);
         endDocument();
@@ -498,13 +484,13 @@ void TextFilter::addTrailer()
     }
 }
 
-void TextFilter::beginDocument()
+void TextFilter::beginDocument(bool isDayClose)
 {
     qDebug() << "beginDocument";
 
     connect();
     addHeader();
-    addReceiptHeader();
+    addReceiptHeader(isDayClose);
 }
 
 void TextFilter::endDocument()
@@ -513,7 +499,7 @@ void TextFilter::endDocument()
     addCenter("-", "-");
 }
 
-void TextFilter::addReceiptHeader()
+void TextFilter::addReceiptHeader(bool isDayClose)
 {
     qDebug() << "addReceiptHeader";
 
@@ -521,11 +507,6 @@ void TextFilter::addReceiptHeader()
     QString line2 = "";
 
     printer->check(printer->readLongStatus(status));
-    int documentNumber = status.documentNumber;
-    if (!isDocumentPrinted){
-        documentNumber += 1;
-    }
-
     // РН ККТ
     line1 = "РН ККТ:" + printer->readParameter(FPTR_PARAMETER_REG_NUMBER);
     line2 = buffer.sprintf("%.2d.%.2d.%.2d %.2d:%.2d",
@@ -534,6 +515,8 @@ void TextFilter::addReceiptHeader()
     add(line1, line2);
 
     // ЗН ККТ
+    int dayNumber = status.dayNumber;
+    if (!isDayClose) dayNumber++;
     line1 = "ЗН ККТ:" + printer->readParameter(FPTR_PARAMETER_SERIAL_NUMBER);
     line2 = buffer.sprintf("СМЕНА:%d", dayNumber);
     add(line1, line2);
@@ -545,7 +528,7 @@ void TextFilter::addReceiptHeader()
 
     // Кассир - document number
     line1 = "Кассир:" + getOperatorName();
-    line2 = buffer.sprintf("#%.4d", documentNumber);
+    line2 = buffer.sprintf("#%.4d", status.documentNumber + 1);
     add(line1, line2);
 }
 
@@ -560,7 +543,7 @@ QString TextFilter::getOperatorName()
         }
     }
     printerOperator.number = operatorNumber;
-    printerOperator.name = printer->readTable(SMFP_TABLE_CASHIER, operatorNumber, 2);
+    printerOperator.name = printer->readTableStr(SMFP_TABLE_CASHIER, operatorNumber, 2);
     printerOperators.append(printerOperator);
     return printerOperator.name;
 }

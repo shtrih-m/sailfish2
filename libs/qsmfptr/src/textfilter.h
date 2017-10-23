@@ -88,13 +88,11 @@ struct XReport
 class TextFilter: public PrinterFilter
 {
 private:
-    uint16_t dayNumber;
     XReport xreport;
     QString buffer;
     bool isFiscal;
     bool connected;
     bool isEJPresent;
-    bool isDocumentPrinted;
     bool receiptOpened;
     QString deviceName;
     uint8_t operatorNumber;
@@ -112,13 +110,13 @@ private:
     void addHeader();
     void addTrailer();
     void endDocument();
-    void beginDocument();
-    void addReceiptHeader();
+    void beginDocument(bool isDayClose = false);
+    void addReceiptHeader(bool isDayClose = false);
     void add(QString text);
+    void addEJLine(QString s);
+    void addXZReport(XReport report);
     void add(QString s1, QString s2);
     void add(QString text, uint64_t amount);
-    void addXZReport(XReport report);
-    void addEJLine(QString s);
     QStringList getLines();
     XReport readXReport();
 

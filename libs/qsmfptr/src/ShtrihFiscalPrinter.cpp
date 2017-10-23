@@ -16,8 +16,8 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QByteArray>
-#include <vector>
 
+#include <vector>
 #include "ShtrihFiscalPrinter.h"
 #include "ServerConnection.h"
 #include "fiscalprinter.h"
@@ -357,7 +357,7 @@ void ShtrihFiscalPrinter::connectDevice()
 
     if (userNameEnabled && (deviceType.model == 19))
     {
-        userName = readTable(14, 1, 7);
+        readTable(14, 1, 7, userName);
     }
 
     if (fdoThreadEnabled)
@@ -388,9 +388,9 @@ void ShtrihFiscalPrinter::startFDOThread()
     qDebug() << "startFDOThread";
 
     // read FDO server parameters
-    serverParams.address = readTable(15, 1, 1);
-    serverParams.port = readTable(15, 1, 2).toInt();
-    pollInterval = readTable(15, 1, 3).toInt()*1000;
+    serverParams.address = readTableStr(15, 1, 1);
+    serverParams.port = readTableStr(15, 1, 2).toInt();
+    pollInterval = readTableStr(15, 1, 3).toInt()*1000;
     serverParams.connectTimeout = 20000;
     serverParams.readTimeout = 100000;
     serverParams.writeTimeout = 20000;
@@ -5528,7 +5528,7 @@ PrinterField ShtrihFiscalPrinter::getPrinterField(int table, int row, int field)
     return printerField;
 }
 
-QString ShtrihFiscalPrinter::readTable(int table, int row, int field)
+QString ShtrihFiscalPrinter::readTableStr(int table, int row, int field)
 {
     qDebug() << "readTable(" << table << ", " << row << ", " << field << ")";
 
@@ -5546,9 +5546,30 @@ QString ShtrihFiscalPrinter::readTable(int table, int row, int field)
     return result;
 }
 
+int ShtrihFiscalPrinter::readTable(int table, int row, int field, QString text)
+{
+    qDebug() << "readTable(" << table << ", " << row << ", " << field << ")";
+
+    PrinterField printerField;
+    printerField = getPrinterField(table, row, field);
+
+    TableValueCommand command;
+    command.table = table;
+    command.row = row;
+    command.field = field;
+    int rc = readTable(command);
+    if (succeeded(rc))
+    {
+        printerField.setBinary(command.value);
+        text = printerField.getValue();
+        qDebug() << "readTable:" << text;
+    }
+    return rc;
+}
+
 int ShtrihFiscalPrinter::readTableInt(int table, int row, int field)
 {
-    QString text = readTable(table, row, field);
+    QString text = readTableStr(table, row, field);
     return text.toInt();
 }
 
@@ -5557,7 +5578,7 @@ QStringList ShtrihFiscalPrinter::readHeader(){
     QStringList header;
     for (int i = 0; i < numHeaderLines; i++)
     {
-        header.append(readTable(SMFP_TABLE_TEXT, i + numHeaderRow, 1));
+        header.append(readTableStr(SMFP_TABLE_TEXT, i + numHeaderRow, 1));
     }
     return header;
 }
@@ -5574,7 +5595,7 @@ QStringList ShtrihFiscalPrinter::readTrailer()
     {
         for (int i = 0; i < numTrailerLines; i++)
         {
-            trailer.append(readTable(SMFP_TABLE_TEXT, i + numTrailerRow, 1));
+            trailer.append(readTableStr(SMFP_TABLE_TEXT, i + numTrailerRow, 1));
         }
     }
     return trailer;
@@ -5582,7 +5603,7 @@ QStringList ShtrihFiscalPrinter::readTrailer()
 
 QString ShtrihFiscalPrinter::readPaymentName(int number)
 {
-    return readTable(SMFP_TABLE_PAYTYPE, number, 1);
+    return readTableStr(SMFP_TABLE_PAYTYPE, number, 1);
 }
 
 QString ShtrihFiscalPrinter::PrinterDateToStr(PrinterDate date)
@@ -6897,16 +6918,6 @@ void ShtrihFiscalPrinter::printLines(QStringList lines)
     setJournalEnabled(journalEnabled);
 }
 
-/*
-void ShtrihFiscalPrinter::printLines(QStringList lines)
-{
-    qDebug() << "printLines";
-    for (int i=0;i<lines.length();i++){
-        check(printLine(lines.at(i)));
-    }
-}
-*/
-
 void ShtrihFiscalPrinter::jrnPrintAll()
 {
     printLines(getJournal()->readAll());
@@ -6914,7 +6925,7 @@ void ShtrihFiscalPrinter::jrnPrintAll()
 
 void ShtrihFiscalPrinter::jrnPrintCurrentDay()
 {
-    printLines(getJournal()->readCurrentDay());
+    jrnPrintDay(readDayNumber() + 1);
 }
 
 void ShtrihFiscalPrinter::jrnPrintDay(int dayNumber)
@@ -6940,9 +6951,9 @@ QString ShtrihFiscalPrinter::readParameter(int ParamId)
         if (regNumber.isEmpty())
         {
             if (isShtrihMobile()){
-                regNumber = readTable(14,1,3);
+                regNumber = readTableStr(14, 1, 3);
             } else {
-                regNumber = readTable(18,1,3);
+                regNumber = readTableStr(18, 1, 3);
             }
         }
         return regNumber;
@@ -6951,9 +6962,9 @@ QString ShtrihFiscalPrinter::readParameter(int ParamId)
         if (serialNumber.isEmpty())
         {
             if (isShtrihMobile()){
-                serialNumber = readTable(14,1,1);
+                serialNumber = readTableStr(14, 1, 1);
             } else{
-                serialNumber = readTable(18,1,1);
+                serialNumber = readTableStr(18, 1, 1);
             }
         }
         return serialNumber;
@@ -6962,9 +6973,9 @@ QString ShtrihFiscalPrinter::readParameter(int ParamId)
         if (fiscalID.isEmpty())
         {
             if (isShtrihMobile()){
-                fiscalID = readTable(14,1,2);
+                fiscalID = readTableStr(14,1,2);
             } else{
-                fiscalID = readTable(18,1,2);
+                fiscalID = readTableStr(18,1,2);
             }
         }
         return fiscalID;
@@ -6973,9 +6984,9 @@ QString ShtrihFiscalPrinter::readParameter(int ParamId)
         if (fsSerialNumber.isEmpty())
         {
             if (isShtrihMobile()){
-                fsSerialNumber = readTable(14,1,4);
+                fsSerialNumber = readTableStr(14,1,4);
             } else{
-                fsSerialNumber = readTable(18,1,4);
+                fsSerialNumber = readTableStr(18,1,4);
             }
         }
         return fsSerialNumber;

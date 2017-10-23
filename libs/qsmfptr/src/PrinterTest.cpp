@@ -31,17 +31,17 @@ void PrinterTest::execute()
     qDebug("PrinterTest::execute");
 
     try {
-        //JournalPrinter journal("journal.txt");
+        JournalPrinter journal("journal.txt");
+        journal.show(journal.readDay(7));
         //journal.show(journal.readAll());
+        //journal.show(journal.readDocRange(21, 22));
         //journal.deleteFile();
 
-        connectPrinter();
-        printText();
-        disconnectPrinter();
-
+        //connectPrinter();
+        //printer.jrnPrintCurrentDay();
+        //disconnectPrinter();
 
         //journal.show(journal.readDay(17));
-        //journal.show(journal.readCurrentDay());
         //journal.show(journal.readDay(5));
         //journal.show(journal.readDoc(121));
         //journal.show(journal.readDoc(122));

@@ -51,3 +51,4 @@ unix:!macx: PRE_TARGETDEPS += $$OUT_PWD/../libs/qsmfptr/libqsmfptr.a
 
 RESOURCES += \
     qmltest.qrc
+

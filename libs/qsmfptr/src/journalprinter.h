@@ -20,7 +20,6 @@ public:
     void setFileName(QString value);
 
     QStringList readAll();
-    QStringList readCurrentDay();
     QStringList readDay(int dayNumber);
     QStringList readDoc(int docNumber);
     QStringList strip(QStringList lines);
@@ -34,6 +33,7 @@ public:
     bool isDocumentHeader(QString line);
     int getDocumentNumber(QString line);
     int findNextDocument(QStringList lines, int index);
+    int findPrevDocument(QStringList lines, int index);
     QStringList copyLines(QStringList lines, int index1, int index2);
 };
 

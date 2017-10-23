@@ -2286,8 +2286,9 @@ public:
     uint16_t readDayNumber();
     uint64_t readCashRegister(uint8_t number);
     uint16_t readOperationRegister(uint8_t number);
-    QString readTable(int table, int row, int field);
     int readTableInt(int table, int row, int field);
+    QString readTableStr(int table, int row, int field);
+    int readTable(int table, int row, int field, QString text);
     void check(int resultCode);
     QStringList readHeader();
     QStringList readTrailer();

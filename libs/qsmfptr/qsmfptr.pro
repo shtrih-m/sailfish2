@@ -10,6 +10,8 @@
 #   - translation filenames have to be changed
 
 # The name of your application
+
+
 TEMPLATE = lib
 TARGET = qsmfptr
 
@@ -17,6 +19,8 @@ CONFIG += c++11
 CONFIG += staticlib
 QT += network
 QT += bluetooth
+
+INCLUDEPATH += $$PWD\src
 
 TRANSLATIONS = translations/ShtrihFiscalPrinter_ru.ts
 
@@ -129,3 +133,4 @@ DISTFILES +=
 
 RESOURCES += \
     qsmfptr.qrc
+
