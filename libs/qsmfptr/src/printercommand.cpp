@@ -11,8 +11,8 @@
  * Created on June 28, 2016, 8:39 PM
  */
 
-#include "PrinterCommand.h"
-#include "ShtrihFiscalPrinter.h"
+#include "printercommand.h"
+#include "shtrihfiscalprinter.h"
 #include "utils.h"
 #include <QDebug>
 

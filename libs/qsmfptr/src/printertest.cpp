@@ -9,7 +9,7 @@
 #include <QPainter>
 #include <QPixmap>
 
-#include "SocketPort.h"
+#include "socketport.h"
 #include "bluetoothport.h"
 #include "bluetoothport2.h"
 #include "printerprotocol1.h"
@@ -24,22 +24,34 @@
 PrinterTest::PrinterTest(QObject* parent)
     : QObject(parent)
 {
+    logger = new Logger("PrinterTest.log");
+    printer = new ShtrihFiscalPrinter(0, logger);
+}
+
+PrinterTest::~PrinterTest()
+{
+    delete printer;
+    delete logger;
 }
 
 void PrinterTest::execute()
 {
     qDebug("PrinterTest::execute");
-
     try {
-        JournalPrinter journal("journal.txt");
-        journal.show(journal.readDay(7));
+
+
+        //JournalPrinter journal("journal.txt");
+        //journal.show(journal.readDay(7));
         //journal.show(journal.readAll());
         //journal.show(journal.readDocRange(21, 22));
         //journal.deleteFile();
 
-        //connectPrinter();
-        //printer.jrnPrintCurrentDay();
-        //disconnectPrinter();
+        deleteLogFile();
+        connectPrinter();
+        disconnectPrinter();
+
+        logger->closeFile();
+        showLogFile();
 
         //journal.show(journal.readDay(17));
         //journal.show(journal.readDay(5));
@@ -47,36 +59,55 @@ void PrinterTest::execute()
         //journal.show(journal.readDoc(122));
         //journal.show(journal.readDocRange(121, 122));
 
-        //printer.jrnPrintAll();
-        //printer.jrnPrintDoc(114);
-        //printer.jrnPrintCurrentDay();
-        //printer.jrnPrintDay(1);
-        //printer.jrnPrintDocRange(107, 109);
+        //printer->jrnPrintAll();
+        //printer->jrnPrintDoc(114);
+        //printer->jrnPrintCurrentDay();
+        //printer->jrnPrintDay(1);
+        //printer->jrnPrintDocRange(107, 109);
         //disconnectPrinter();
     } catch (PortException e) {
         qDebug() << e.getText();
     }
 }
 
+void PrinterTest::deleteLogFile(){
+    QFile file("PrinterTest.log");
+    file.remove();
+}
+
+void PrinterTest::showLogFile()
+{
+    QFile file("PrinterTest.log");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QTextStream stream(&file);
+        stream.setCodec("UTF-8");
+        while (!stream.atEnd())
+        {
+            QString line = stream.readLine();
+            qDebug() << line;
+        }
+        file.close();
+    }
+}
+
 void PrinterTest::printText()
 {
     QString text = "Line_01234567890123456789012345678901234567890123456789\r\n0123456789012345678901234567890123456789012345678901234567890123456789";
-    printer.printText(text);
+    printer->printText(text);
 }
 
 void PrinterTest::readLastDocMac()
 {
     FSStatus status;
-    printer.check(printer.fsReadStatus(status));
+    printer->check(printer->fsReadStatus(status));
     FSFindDocument document;
     document.docNum = status.docNumber;
-    printer.check(printer.fsFindDocument(document));
+    printer->check(printer->fsFindDocument(document));
     qDebug() << "FindDocument: " << StringUtils::dataToHex(document.docData);
     qDebug() << "document.docType: " << document.docType;
-    uint32_t docMac = printer.getDocumentMac(document);
-    QString text;
-    text.sprintf("ФД:%u ФПД:%u", status.docNumber, docMac);
-    qDebug() << text;
+    uint32_t docMac = printer->getDocumentMac(document);
+    qDebug() << QString("ФД:%1 ФПД:%2").arg(status.docNumber).arg(docMac);
 }
 
 
@@ -123,7 +154,7 @@ void PrinterTest::testFile()
     PrintStringCommand command;
     command.flags = SMFP_STATION_REC;
     command.text = "Строка 0";
-    printer.printString(command);
+    printer->printString(command);
     */
 
     QString line;
@@ -160,7 +191,7 @@ void PrinterTest::waitForDocuments()
     while (true)
     {
         int docCount = 0;
-        int rc = printer.fsReadDocCount(docCount);
+        int rc = printer->fsReadDocCount(docCount);
         if (rc != 0) break;
         qDebug() << "docCount = " << docCount;
         if (docCount == 0) break;
@@ -208,7 +239,7 @@ void PrinterTest::fsReadStatus()
 {
     qDebug() << "fsReadStatus";
     FSStatus status;
-    if (printer.fsReadStatus(status) != 0) return;
+    if (printer->fsReadStatus(status) != 0) return;
 
     qDebug() << "-----------------------------------------";
     qDebug() << "  Состояние ФН";
@@ -222,33 +253,33 @@ void PrinterTest::fsReadStatus()
     qDebug() << "Получены данные документа :" << status.isDocReceived;
     qDebug() << "Cмена открыта             :" << status.isDayOpened;
     qDebug() << "Флаги предупреждения      :" << status.flags.value;
-    qDebug() << "Дата                      :" << printer.PrinterDateToStr(status.date);
-    qDebug() << "Время                     :" << printer.PrinterTimeToStr(status.time);
+    qDebug() << "Дата                      :" << printer->PrinterDateToStr(status.date);
+    qDebug() << "Время                     :" << printer->PrinterTimeToStr(status.time);
     qDebug() << "Номер ФН                  :" << status.fsSerial;
     qDebug() << "Номер последнего ФД       :" << status.docNumber;
     qDebug() << "-----------------------------------------";
 
     QString serial;
-    if (printer.fsReadSerial(serial) != 0) return;
+    if (printer->fsReadSerial(serial) != 0) return;
     qDebug() << "Серийный номер ФН         :" << serial;
     qDebug() << "-----------------------------------------";
 
     PrinterDate date;
-    if (printer.fsReadExpDate(date) != 0) return;
-    qDebug() << "Срок действия ФН          :" << printer.PrinterDateToStr(date);
+    if (printer->fsReadExpDate(date) != 0) return;
+    qDebug() << "Срок действия ФН          :" << printer->PrinterDateToStr(date);
     qDebug() << "-----------------------------------------";
 
     FSVersion version;
-    if (printer.fsReadVersion(version) != 0) return;
+    if (printer->fsReadVersion(version) != 0) return;
     qDebug() << "Версия ПО ФН              :" << version.text;
     qDebug() << "Версия является серийной  :" << version.isRelease;
     qDebug() << "-----------------------------------------";
 
     FSReadFiscalization fiscalization;
-    if (printer.fsReadFiscalization(fiscalization) != 0) return;
+    if (printer->fsReadFiscalization(fiscalization) != 0) return;
 
     qDebug() << "Итоги фискализации";
-    qDebug() << "Дата и время :" << printer.PrinterDateToStr(fiscalization.date) << ", " << printer.PrinterTimeToStr(fiscalization.time);
+    qDebug() << "Дата и время :" << printer->PrinterDateToStr(fiscalization.date) << ", " << printer->PrinterTimeToStr(fiscalization.time);
     qDebug() << "ИНН :" << fiscalization.inn;
     qDebug() << "РНМ :" << fiscalization.rnm;
     qDebug() << "Код налогообложения :" << fiscalization.taxSystem;
@@ -263,7 +294,7 @@ void PrinterTest::sendBlock()
 
     QByteArray block;
     QByteArray answer;
-    if (!printer.readBlock(block)){
+    if (!printer->readBlock(block)){
         qDebug() << "No receipt data available";
         return;
     }
@@ -276,16 +307,16 @@ void PrinterTest::sendBlock()
     params.readTimeout = 20000;
     params.writeTimeout = 20000;
     params.connectRetries = 1;
-    printer.setServerParams(params);
+    printer->setServerParams(params);
 
     qDebug() << "-> " << StringUtils::dataToHex(block);
-    if (!printer.sendBlock(block, answer))
+    if (!printer->sendBlock(block, answer))
     {
         qDebug() << "sendBlock: FAILED!";
         return;
     }
     qDebug() << "<- " << StringUtils::dataToHex(block);
-    printer.writeBlock(answer);
+    printer->writeBlock(answer);
     qDebug() << "sendBlock: OK";
 }
 
@@ -302,9 +333,9 @@ void PrinterTest::sendBlocks()
     params.readTimeout = 20000;
     params.writeTimeout = 20000;
     params.connectRetries = 1;
-    printer.setServerParams(params);
+    printer->setServerParams(params);
 
-    printer.sendBlocks();
+    printer->sendBlocks();
     qDebug() << "sendBlocks: OK";
 }
 
@@ -323,7 +354,7 @@ void PrinterTest::testSprintf()
 
 void PrinterTest::connectPrinter()
 {
-    BluetoothPort2* port = new BluetoothPort2();
+    BluetoothPort2* port = new BluetoothPort2(logger);
     port->setAddress("00:01:90:C5:60:F7");
     port->setReadTimeout(10000);
     port->setWriteTimeout(10000);
@@ -332,18 +363,18 @@ void PrinterTest::connectPrinter()
     port->connectToDevice();
     qDebug() << "Port opened!";
 
-    PrinterProtocol2* protocol = new PrinterProtocol2(port);
-    printer.setProtocol(protocol);
-    printer.setTimeout(10000);
-    printer.setFdoThreadEnabled(false);
-    printer.setJournalEnabled(true);
-    printer.connectDevice();
+    PrinterProtocol2* protocol = new PrinterProtocol2(port, logger);
+    printer->setProtocol(protocol);
+    printer->setTimeout(10000);
+    printer->setFdoThreadEnabled(false);
+    printer->setJournalEnabled(true);
+    printer->connectDevice();
     qDebug("Printer connected!");
 }
 
 void PrinterTest::disconnectPrinter()
 {
-    printer.disconnectDevice();
+    printer->disconnectDevice();
     qDebug("Printer disconnected!");
 }
 
@@ -384,13 +415,13 @@ void PrinterTest::printBarcode()
     PrinterBarcode barcode;
     barcode.text = "Barcode test";
     barcode.type = BARCODE_QRCODE;
-    printer.printBarcode(barcode);
+    printer->printBarcode(barcode);
 }
 
 void PrinterTest::printImages()
 {
     qDebug() << "printImages()";
-    printer.clearImages();
+    printer->clearImages();
     //printImage(":/images/res/Logo.bmp");
 
     /*
@@ -422,16 +453,16 @@ void PrinterTest::printImage(QImage image)
     PrintStringCommand cmd;
     cmd.flags = 2;
     cmd.text = path;
-    printer.printString(cmd);
+    printer->printString(cmd);
 
     QElapsedTimer timer;
     timer.start();
-    printer.printImage3(image);
+    printer->printImage3(image);
 
     QString text;
     text = QString("Printed in %1 ms.").arg(timer.elapsed());
     cmd.text = text;
-    printer.printString(cmd);
+    printer->printString(cmd);
     */
 }
 
@@ -536,22 +567,22 @@ void PrinterTest::beep()
 {
     qDebug("Printer beep...");
     BeepCommand beepCommand;
-    check(printer.beep(beepCommand));
+    check(printer->beep(beepCommand));
 }
 
 void PrinterTest::readShortStatus()
 {
     qDebug("Read short status...");
     ReadShortStatusCommand command;
-    check(printer.readShortStatus(command));
-    if (printer.succeeded(command.resultCode)) {
+    check(printer->readShortStatus(command));
+    if (printer->succeeded(command.resultCode)) {
         qDebug() << "Operator                 : " << command.operatorNumber;
 
         qDebug().nospace() << "Flags                    : 0x" << StringUtils::intToHex(command.flags, 2) << ", " << command.flags;
 
-        qDebug() << "Mode                     : 0x" << StringUtils::intToHex(command.mode, 1) << ", " << command.mode << ", " << printer.getModeText(command.mode);
+        qDebug() << "Mode                     : 0x" << StringUtils::intToHex(command.mode, 1) << ", " << command.mode << ", " << printer->getModeText(command.mode);
 
-        qDebug() << "Submode                  : 0x" << StringUtils::intToHex(command.submode, 1) << ", " << command.submode << ", " << printer.getSubmodeText(command.submode);
+        qDebug() << "Submode                  : 0x" << StringUtils::intToHex(command.submode, 1) << ", " << command.submode << ", " << printer->getSubmodeText(command.submode);
 
         qDebug() << "Number of operations     : " << command.numOperations;
         qDebug() << "Fiscal memory error      : " << command.fmError;
@@ -565,8 +596,8 @@ void PrinterTest::readLongStatus()
 {
     qDebug("Read long status...");
     ReadLongStatusCommand command;
-    check(printer.readLongStatus(command));
-    if (printer.succeeded(command.resultCode)) {
+    check(printer->readLongStatus(command));
+    if (printer->succeeded(command.resultCode)) {
         qDebug() << "Operator number : " << command.operatorNumber;
         qDebug() << "Flags           : " << command.flags;
         qDebug() << "Mode            : " << command.mode;
@@ -582,7 +613,7 @@ void PrinterTest::printBoldString()
     PrintBoldCommand command;
     command.flags = 0x03;
     command.text = "Привет, мир!!!";
-    check(printer.printBold(command));
+    check(printer->printBold(command));
 }
 
 void PrinterTest::writePortParameters()
@@ -592,7 +623,7 @@ void PrinterTest::writePortParameters()
     command.port = 0;
     command.timeout = 1000;
     command.baudRate = 115200;
-    check(printer.writePortParameters(command));
+    check(printer->writePortParameters(command));
 }
 
 void PrinterTest::readPortParameters()
@@ -602,8 +633,8 @@ void PrinterTest::readPortParameters()
     command.port = 0;
     command.baudRate = 0;
     command.timeout = 0;
-    check(printer.readPortParameters(command));
-    if (printer.succeeded(command.resultCode)) {
+    check(printer->readPortParameters(command));
+    if (printer->succeeded(command.resultCode)) {
         qDebug() << "BaudRate : " << command.baudRate;
         qDebug() << "Timeout  : " << command.timeout;
     }
@@ -615,7 +646,7 @@ void PrinterTest::printString()
         PrintStringCommand command;
         command.flags = 3;
         command.text = "Привет, мир!!!";
-        check(printer.printString(command));
+        check(printer->printString(command));
     }
 }
 
@@ -626,7 +657,7 @@ void PrinterTest::printDocHeader()
     PrintDocHeaderCommand command;
     command.text = "Новый документ";
     command.number = 1234;
-    check(printer.printDocHeader(command));
+    check(printer->printDocHeader(command));
 }
 
 void PrinterTest::startTest()
@@ -635,7 +666,7 @@ void PrinterTest::startTest()
     qDebug("Start test mode...");
     StartTestCommand command;
     command.periodInMinutes = 1;
-    check(printer.startTest(command));
+    check(printer->startTest(command));
 }
 
 void PrinterTest::readCashRegisters()
@@ -644,8 +675,8 @@ void PrinterTest::readCashRegisters()
     ReadCashRegCommand command;
     for (int i = 0; i < 0xFF; i++) {
         command.number = i;
-        printer.readRegister(command);
-        if (printer.failed(command.resultCode))
+        printer->readRegister(command);
+        if (printer->failed(command.resultCode))
             break;
         qDebug() << "Cash register " << command.number
                  << ": " << command.value;
@@ -659,8 +690,8 @@ void PrinterTest::readOperRegisters()
     ReadOperRegCommand command;
     for (int i = 0; i < 0xFF; i++) {
         command.number = i;
-        printer.readRegister(command);
-        if (printer.failed(command.resultCode))
+        printer->readRegister(command);
+        if (printer->failed(command.resultCode))
             break;
         qDebug() << "Operation register " << command.number
                  << ": " << command.value;
@@ -678,13 +709,13 @@ void PrinterTest::readTable()
     command.row = 1;
     command.field = 1;
     command.value = ba;
-    check(printer.writeTable(command));
+    check(printer->writeTable(command));
     if (command.resultCode != 0)
         return;
     qDebug() << "Table 1.1.1 = " << command.value;
     qDebug("Read table...");
     command.value = "";
-    check(printer.readTable(command));
+    check(printer->readTable(command));
     if (command.resultCode != 0)
         return;
     qDebug() << "Table 1.1.1 = " << command.value;
@@ -701,19 +732,19 @@ void PrinterTest::printReceiptCopy()
 {
     qDebug() << "printReceiptCopy";
     PasswordCommand command;
-    check(printer.printCopy(command));
+    check(printer->printCopy(command));
 }
 
 void PrinterTest::printSaleReceipt()
 {
     qDebug() << "printSaleReceipt.0";
 
-    check(printer.resetPrinter());
+    check(printer->resetPrinter());
     // Open receipt
     OpenReceiptCommand openReceipt;
     openReceipt.receiptType = SMFP_RECTYPE_SALE;
-    check(printer.openReceipt(openReceipt));
-    check(printer.waitForPrinting());
+    check(printer->openReceipt(openReceipt));
+    check(printer->waitForPrinting());
     // Item 1
     QString itemText = "Line1";
     //QString itemText = "Line1\r\n";
@@ -731,11 +762,11 @@ void PrinterTest::printSaleReceipt()
     itemCommand.tax3 = 0;
     itemCommand.tax4 = 0;
     itemCommand.text = itemText;
-    check(printer.printSale(itemCommand));
-    check(printer.waitForPrinting());
+    check(printer->printSale(itemCommand));
+    check(printer->waitForPrinting());
     // addTag
-    printer.fsWriteTag(1008, "89168191324");
-    printer.fsWriteTag(1009, "835683746574");
+    printer->fsWriteTag(1008, "89168191324");
+    printer->fsWriteTag(1009, "835683746574");
     // Close receipt
     CloseReceiptCommand closeCommand;
     closeCommand.amount1 = 123456;
@@ -748,8 +779,8 @@ void PrinterTest::printSaleReceipt()
     closeCommand.tax3 = 0;
     closeCommand.tax4 = 0;
     closeCommand.text = "Закрытие чека";
-    check(printer.closeReceipt(closeCommand));
-    //check(printer.waitForPrinting());
+    check(printer->closeReceipt(closeCommand));
+    //check(printer->waitForPrinting());
 
     qDebug() << "printSaleReceipt.1";
 }
@@ -758,8 +789,8 @@ void PrinterTest::printRefundReceipt()
 {
     // Cancel receipt
     PasswordCommand command;
-    check(printer.cancelReceipt(command));
-    check(printer.waitForPrinting());
+    check(printer->cancelReceipt(command));
+    check(printer->waitForPrinting());
     // Item 1
     ReceiptItemCommand itemCommand;
     itemCommand.quantity = 1000;
@@ -770,8 +801,8 @@ void PrinterTest::printRefundReceipt()
     itemCommand.tax3 = 0;
     itemCommand.tax4 = 0;
     itemCommand.text = "Товар 1";
-    check(printer.printRetSale(itemCommand));
-    check(printer.waitForPrinting());
+    check(printer->printRetSale(itemCommand));
+    check(printer->waitForPrinting());
     // Close receipt
     CloseReceiptCommand closeCommand;
     closeCommand.amount1 = 123456;
@@ -784,20 +815,20 @@ void PrinterTest::printRefundReceipt()
     closeCommand.tax3 = 0;
     closeCommand.tax4 = 0;
     closeCommand.text = "Закрытие чека";
-    check(printer.closeReceipt(closeCommand));
-    check(printer.waitForPrinting());
+    check(printer->closeReceipt(closeCommand));
+    check(printer->waitForPrinting());
 }
 
 void PrinterTest::printXReport()
 {
     PasswordCommand command;
-    printer.printXReport(command);
-    check(printer.waitForPrinting());
+    printer->printXReport(command);
+    check(printer->waitForPrinting());
 }
 
 void PrinterTest::printDayIsOpened()
 {
-    if (printer.isDayOpened()) {
+    if (printer->isDayOpened()) {
         qDebug() << "Day is opened";
     } else {
         qDebug() << "Day is closed";
@@ -809,8 +840,8 @@ void PrinterTest::printZReport()
     printDayIsOpened();
 
     PasswordCommand command;
-    printer.printZReport(command);
-    //check(printer.waitForPrinting());
+    printer->printZReport(command);
+    //check(printer->waitForPrinting());
 
     printDayIsOpened();
 }

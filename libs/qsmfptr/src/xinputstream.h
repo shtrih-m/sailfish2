@@ -3,7 +3,7 @@
 
 #include <QByteArray>
 #include <QTextCodec>
-#include "PrinterTypes.h"
+#include "printertypes.h"
 
 class XInputStream
 {

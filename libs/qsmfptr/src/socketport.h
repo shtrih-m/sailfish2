@@ -18,10 +18,11 @@
 #include <QByteArray>
 #include <QTcpSocket>
 #include <string>
+#include "logger.h"
 
 class SocketPort : public PrinterPort {
 public:
-    SocketPort(std::string address, int port);
+    SocketPort(std::string address, int port, Logger* logger);
     virtual ~SocketPort();
 
     bool connectToDevice(int timeout = 0);
@@ -34,6 +35,7 @@ public:
     void writeBytes(const QByteArray& data);
 
 private:
+    Logger* logger;
     std::string address;
     int port;
     int readTimeout;

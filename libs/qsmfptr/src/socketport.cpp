@@ -19,8 +19,9 @@
 
 #include "SocketPort.h"
 #include "utils.h"
+#include "logger.h"
 
-SocketPort::SocketPort(std::string address, int port)
+SocketPort::SocketPort(std::string address, int port, Logger* logger)
 {
     this->address = address;
     this->port = port;
@@ -36,8 +37,6 @@ SocketPort::~SocketPort()
 
 bool SocketPort::connectToDevice(int timeout)
 {
-    qDebug() << "SocketPort::open(" << timeout << ")";
-
     long retryTimeout = 100; // retry after 100 ms
     disconnect();
 
@@ -49,7 +48,7 @@ bool SocketPort::connectToDevice(int timeout)
             return true;
         if (timer.elapsed() > timeout)
         {
-            qDebug() << "Timeout connecting to host";
+            logger->write("Timeout connecting to host");
             return false;
         }
         QSleepThread::msleep(retryTimeout);

@@ -1,7 +1,7 @@
 #ifndef FISCALPRINTER_H
 #define FISCALPRINTER_H
 
-#include "PrinterCommand.h"
+#include "printercommand.h"
 #include <QByteArray>
 #include <QException>
 #include <QObject>

@@ -1,6 +1,6 @@
 
 #include "printerprotocol1.h"
-#include "ShtrihFiscalPrinter.h"
+#include "shtrihfiscalprinter.h"
 #include "utils.h"
 #include <QDebug>
 

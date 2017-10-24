@@ -12,56 +12,8 @@
 #include <QObject>
 
 #include "utils.h"
-
+#include "logger.h"
 #include "bluetoothport2.h"
-
-int bachk(const char* str)
-{
-    if (!str) {
-        qDebug() << "!str";
-        return -1;
-    }
-
-    if (strlen(str) != 17) {
-        qDebug() << "strlen(str) != 17";
-        return -1;
-    }
-
-    while (*str) {
-        if (!isxdigit(*str++)) {
-            qDebug() << "!isxdigit(*str++).1";
-            return -1;
-        }
-
-        if (!isxdigit(*str++)) {
-            qDebug() << "!isxdigit(*str++).2";
-            return -1;
-        }
-
-        if (*str == 0)
-            break;
-
-        if (*str++ != ':') {
-            qDebug() << "*str++ != ':'";
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-int str2ba(const char* str, bdaddr_t* ba)
-{
-    if (bachk(str) < 0) {
-        memset(ba, 0, sizeof(*ba));
-        return -1;
-    }
-
-    for (int i = 5; i >= 0; i--, str += 3)
-        ba->b[i] = strtol(str, NULL, 16);
-
-    return 0;
-}
 
 static inline void convertAddress(quint64 from, quint8 (&to)[6])
 {
@@ -73,11 +25,11 @@ static inline void convertAddress(quint64 from, quint8 (&to)[6])
     to[5] = (from >> 40) & 0xff;
 }
 
-BluetoothPort2::BluetoothPort2(QObject* parent)
-    : QObject(parent)
+BluetoothPort2::BluetoothPort2(Logger* logger)
 {
+    this->logger = logger;
+    address = "";
     isConnected = false;
-    this->address = address;
     readTimeout = 1000;
     writeTimeout = 1000;
     connectRetries = 3;
@@ -103,19 +55,19 @@ bool BluetoothPort2::connectToDevice()
 
     for (int i = 0; i < connectRetries; i++) {
         if (i != 0) {
-            qDebug() << "Connecting RFCOMM socket, retry " << i;
+            logger->write("Connecting RFCOMM socket, retry " + i);
         }
 
         sk = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
         if (sk < 0) {
-            qDebug("Failed to create RFCOMM socket");
+            logger->write("Failed to create RFCOMM socket");
             return false;
         }
 
         ::fcntl(sk, F_SETFL, O_NONBLOCK);
 
         if (::connect(sk, (struct sockaddr*)&raddr, sizeof(raddr)) >= 0) {
-            qDebug("Connected to RFCOMM socket!");
+            logger->write("Connected to RFCOMM socket!");
             isConnected = true;
             return true;
         }
@@ -131,12 +83,12 @@ bool BluetoothPort2::connectToDevice()
             socklen_t len = sizeof so_error;
             getsockopt(sk, SOL_SOCKET, SO_ERROR, &so_error, &len);
             if (so_error == 0) {
-                qDebug("Connected to RFCOMM socket!");
+                logger->write("Connected to RFCOMM socket!");
                 isConnected = true;
                 return true;
             }
         }
-        qDebug() << "Failed to connect RFCOMM socket";
+        logger->write("Failed to connect RFCOMM socket");
         close(sk);
     }
     return false;
@@ -229,7 +181,7 @@ QByteArray BluetoothPort2::readBytes(int count)
         int toread = count - packet.length();
         int n = read(sk, &buf, toread);
         if (n < 0) {
-            qDebug("ERROR reading from socket");
+            logger->write("ERROR reading from socket");
             if (errno != EAGAIN){
                 throw new PortException(getErrorText(errno));
              }        
@@ -259,7 +211,7 @@ void BluetoothPort2::waitRead()
         socklen_t len = sizeof so_error;
         getsockopt(sk, SOL_SOCKET, SO_ERROR, &so_error, &len);
         if (so_error != 0) {
-            qDebug() << "ERROR: " << so_error;
+            logger->write("ERROR: " + so_error);
         }
     }
 }
@@ -276,10 +228,60 @@ void BluetoothPort2::writeBytes(const QByteArray& data)
     connectToDevice();
     int rc = write(sk, data.data(), data.length());
     if (rc < 0)
-        qDebug("ERROR writing to socket");
+        logger->write("ERROR writing to socket");
 }
 
 QString BluetoothPort2::findDevice()
 {
     return "";
 }
+
+int BluetoothPort2::bachk(const char* str)
+{
+    if (!str) {
+        logger->write("!str");
+        return -1;
+    }
+
+    if (strlen(str) != 17) {
+        logger->write("strlen(str) != 17");
+        return -1;
+    }
+
+    while (*str) {
+        if (!isxdigit(*str++)) {
+            logger->write("!isxdigit(*str++).1");
+            return -1;
+        }
+
+        if (!isxdigit(*str++)) {
+            logger->write("!isxdigit(*str++).2");
+            return -1;
+        }
+
+        if (*str == 0)
+            break;
+
+        if (*str++ != ':') {
+            logger->write("*str++ != ':'");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int BluetoothPort2::str2ba(const char* str, bdaddr_t* ba)
+{
+    if (bachk(str) < 0) {
+        memset(ba, 0, sizeof(*ba));
+        return -1;
+    }
+
+    for (int i = 5; i >= 0; i--, str += 3)
+        ba->b[i] = strtol(str, NULL, 16);
+
+    return 0;
+}
+
+

@@ -21,19 +21,13 @@ QT += network
 QT += bluetooth
 
 INCLUDEPATH += $$PWD\src
-
 TRANSLATIONS = translations/ShtrihFiscalPrinter_ru.ts
 
 DEFINES += NO_PNG ZINT_VERSION="2.4.2"
 
 HEADERS += \
     src/fiscalprinter.h \
-    src/MemStream.h \
-    src/PrinterCommand.h \
     src/printerprotocol1.h \
-    src/PrinterTypes.h \
-    src/ShtrihFiscalPrinter.h \
-    src/SocketPort.h \
     src/utils.h \
     src/bluetoothport.h \
     src/printertest.h \
@@ -45,17 +39,17 @@ HEADERS += \
     src/tlvtag.h \
     src/journalprinter.h \
     src/xinputstream.h \
-    src/debugutils.h
+    src/logger.h \
+    src/memstream.h \
+    src/printercommand.h \
+    src/printertypes.h \
+    src/shtrihfiscalprinter.h \
+    src/socketport.h
 
 SOURCES += \
-    src/MemStream.cpp \
-    src/PrinterCommand.cpp \
     src/printerprotocol1.cpp \
     src/printerprotocol2.cpp \
-    src/ShtrihFiscalPrinter.cpp \
-    src/SocketPort.cpp \
     src/bluetoothport.cpp \
-    src/PrinterTest.cpp \
     src/textfilter.cpp \
     src/bluetoothport2.cpp \
     src/utils.cpp \
@@ -64,7 +58,12 @@ SOURCES += \
     src/tlvtag.cpp \
     src/journalprinter.cpp \
     src/xinputstream.cpp \
-    src/debugutils.cpp
+    src/logger.cpp \
+    src/memstream.cpp \
+    src/printercommand.cpp \
+    src/printertest.cpp \
+    src/shtrihfiscalprinter.cpp \
+    src/socketport.cpp
 
 HEADERS +=  src/zint/aztec.h \
             src/zint/code49.h \

@@ -1,8 +1,9 @@
 #ifndef PRINTERPROTOCOL2_H
 #define PRINTERPROTOCOL2_H
 
-#include "fiscalprinter.h"
 #include <QByteArray>
+#include "fiscalprinter.h"
+#include "logger.h"
 
 class ProtocolFrame2 {
 private:
@@ -22,6 +23,7 @@ public:
 
 class PrinterProtocol2 : public PrinterProtocol {
 private:
+    Logger* logger;
     QByteArray rx;
     PrinterPort* port;
     ProtocolFrame2 frame;
@@ -36,7 +38,7 @@ private:
     void synchronizeFrames(int timeout);
 
 public:
-    PrinterProtocol2(PrinterPort* port);
+    PrinterProtocol2(PrinterPort* port, Logger* logger);
 
     void connect();
     void disconnect();

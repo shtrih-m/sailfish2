@@ -20,11 +20,12 @@
 #include <vector>
 
 #include "tlvtag.h"
-#include "PrinterCommand.h"
-#include "PrinterTypes.h"
+#include "printercommand.h"
+#include "printertypes.h"
 #include "fiscalprinter.h"
 #include "serverconnection.h"
 #include "JournalPrinter.h"
+#include "Logger.h"
 
 // ////////////////////////////////////////////////////////////////////////
 // Parameter ID
@@ -2115,7 +2116,7 @@ public:
 class ShtrihFiscalPrinter : public QObject {
     Q_OBJECT
 public:
-    explicit ShtrihFiscalPrinter(QObject* parent = 0);
+    explicit ShtrihFiscalPrinter(QObject* parent, Logger* logger);
     virtual ~ShtrihFiscalPrinter();
     void setTimeout(int value);
     bool getJournalEnabled();
@@ -2402,7 +2403,9 @@ public:
     FSDocument6 decodeDocument6(QByteArray data);
     FSDocument11 decodeDocument11(QByteArray data);
     FSDocument21 decodeDocument21(QByteArray data);
+    Logger* getLogger();
 private:
+    Logger* logger;
     QMutex* mutex;
     TlvTags tlvTags;
     int pollInterval;
@@ -2430,7 +2433,6 @@ private:
     uint8_t numHeaderLines;
     uint8_t numTrailerLines;
     PrinterFields fields;
-    ServerConnection connection;
     ServerParams serverParams;
     QString userName;
     DeviceTypeCommand deviceType;

@@ -1,10 +1,11 @@
 #include "printerprotocol2.h"
 
-#include "MemStream.h"
-#include "utils.h"
-#include <QDataStream>
 #include <QDebug>
-#include "DebugUtils.h"
+#include <QDataStream>
+
+#include "utils.h"
+#include "logger.h"
+#include "memstream.h"
 
 
 const uint8_t STX = 0x8F;
@@ -96,11 +97,12 @@ uint16_t ProtocolFrame2::getCRC(QByteArray data)
     return result;
 }
 
-PrinterProtocol2::PrinterProtocol2(PrinterPort* port)
+PrinterProtocol2::PrinterProtocol2(PrinterPort* port, Logger* logger)
 {
+    this->port = port;
+    this->logger = logger;
     isSynchronized = false;
     maxRepeatCount = 3;
-    this->port = port;
     syncTimeout = 1000;
 }
 
@@ -129,9 +131,9 @@ void PrinterProtocol2::synchronizeFrames(int timeout)
             isSynchronized = true;
             frame.incNumber();
             break;
-        } catch (PortException e) {
-            qDebug() << "ERROR: ";
-            qDebug() << "ERROR: " << e.getText();
+        } catch (PortException e)
+        {
+            logger->write("ERROR: " + e.getText());
         }
     }
 }
@@ -188,7 +190,7 @@ int PrinterProtocol2::readAnswer(bool sync)
 
             uint16_t frameCrc = frame.getCRC(stream.getBuffer());
             if (crc != frameCrc) {
-                qDebug() << "Invalid CRC !!!";
+                logger->write("Invalid CRC !!!");
                 //throw new TextException("Invalid CRC");
             }
             break;

@@ -6,13 +6,16 @@
 #include <QBluetoothLocalDevice>
 #include <QBluetoothServiceInfo>
 
-#include "ShtrihFiscalPrinter.h"
+#include "shtrihfiscalprinter.h"
+#include "logger.h"
 
 
 class PrinterTest : public QObject {
     Q_OBJECT
 public:
     explicit PrinterTest(QObject* parent = 0);
+    ~PrinterTest();
+
     void execute();
     void startDeviceDiscovery();
     void startServiceDiscovery();
@@ -22,8 +25,9 @@ public Q_SLOTS:
     void serviceDiscovered(const QBluetoothServiceInfo& service);
 
 private:
+    Logger* logger;
     int password;
-    ShtrihFiscalPrinter printer;
+    ShtrihFiscalPrinter* printer;
     QBluetoothLocalDevice localDevice;
     QBluetoothDeviceDiscoveryAgent discoveryAgent;
 
@@ -63,6 +67,8 @@ private:
     void printReceiptCopy();
     void readLastDocMac();
     void printText();
+    void deleteLogFile();
+    void showLogFile();
 };
 
 #endif // PRINTERTEST_H

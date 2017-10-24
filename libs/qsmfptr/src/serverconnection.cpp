@@ -15,10 +15,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <logger.h>
 
-ServerConnection::ServerConnection()
+ServerConnection::ServerConnection(Logger* logger)
 {
     connected = false;
+    this->logger = logger;
 }
 
 void ServerConnection::setParams(ServerParams params)
@@ -30,11 +32,11 @@ void ServerConnection::disconnect()
 {
     if (!connected) return;
 
-    qDebug() << "disconnect";
+    logger->write("disconnect");
     shutdown(sk, SHUT_RDWR);
     close(sk);
     connected = false;
-    qDebug() << "disconnect: OK";
+    logger->write("disconnect: OK");
 }
 
 QString ServerConnection::getErrorText(){
@@ -46,7 +48,6 @@ void ServerConnection::clearError(){
 }
 
 bool ServerConnection::error(QString text){
-    qDebug() << text;
     errorText = text;
     return false;
 }
@@ -55,7 +56,7 @@ bool ServerConnection::connect()
 {
     clearError();
     if (connected) return true;
-    qDebug() << "connect";
+    logger->write("connect");
 
     sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -65,7 +66,7 @@ bool ServerConnection::connect()
 
     for (int i = 0; i < params.connectRetries; i++) {
         if (i != 0) {
-            qDebug() << "Connecting, retry " << i;
+            logger->write("Connecting, retry " + i);
         }
 
         sk = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -76,7 +77,7 @@ bool ServerConnection::connect()
         ::fcntl(sk, F_SETFL, O_NONBLOCK);
 
         if (::connect(sk, (struct sockaddr*)&addr, sizeof(addr)) >= 0) {
-            qDebug("Connected to socket!");
+            logger->write("Connected to socket!");
             connected = true;
             return true;
         }
@@ -92,7 +93,7 @@ bool ServerConnection::connect()
             socklen_t len = sizeof so_error;
             getsockopt(sk, SOL_SOCKET, SO_ERROR, &so_error, &len);
             if (so_error == 0) {
-                qDebug("Connected to socket!");
+                logger->write("Connected to socket!");
                 connected = true;
                 return true;
             }
@@ -104,7 +105,8 @@ bool ServerConnection::connect()
 
 bool ServerConnection::read(int size, QByteArray& packet)
 {
-    qDebug() << "read(" << size << ")";
+    QString text;
+    logger->write(text.sprintf("read(%d)", size));
 
     connect();
 
@@ -130,7 +132,6 @@ bool ServerConnection::read(int size, QByteArray& packet)
             return error("Timeout error");
         }
     }
-    //qDebug() << "<- " << StringUtils::dataToHex(packet);
     return true;
 }
 
@@ -146,22 +147,25 @@ void ServerConnection::waitRead()
         int so_error;
         socklen_t len = sizeof so_error;
         getsockopt(sk, SOL_SOCKET, SO_ERROR, &so_error, &len);
-        if (so_error != 0) {
-            qDebug() << "ERROR: " << so_error << ", " << getErrorText(so_error);
+        if (so_error != 0)
+        {
+            QString text;
+            logger->write(text.sprintf("ERROR: %d, ", so_error) + getErrorText(so_error));
         }
     }
 }
 
 void ServerConnection::write(const QByteArray& data)
 {
-    //qDebug() << "-> " << StringUtils::dataToHex(data);
+    logger->write("-> " + StringUtils::dataToHex(data));
     if (data.length() == 0) return;
 
     connect();
     int rc = ::write(sk, data.data(), data.length());
     if (rc < 0)
     {
-        qDebug() << "ERROR writing to socket: " << rc << ", " << getErrorText(rc);
+        QString text;
+        logger->write(text.sprintf("ERROR writing to socket: %d, ", rc) + getErrorText(rc));
     }
 }
 

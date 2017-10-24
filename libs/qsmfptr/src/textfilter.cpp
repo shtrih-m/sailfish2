@@ -3,7 +3,7 @@
 #include <QDebug>
 #include <QString>
 #include "textfilter.h"
-#include "src/ShtrihFiscalPrinter.h"
+#include "src/shtrihfiscalprinter.h"
 
 uint64_t round2(double value){
     return (value + 0.5);
@@ -138,8 +138,6 @@ void TextFilter::addCenter(QString c, QString text)
 
 void TextFilter::add(QString text)
 {
-    qDebug() << "TextFilter: " << text;
-
     QFile file(fileName);
     if (file.open(QIODevice::ReadWrite | QIODevice::Text))
     {
@@ -150,7 +148,7 @@ void TextFilter::add(QString text)
         file.close();
     } else
     {
-        qDebug() << "Failed to open file";
+        printer->getLogger()->write("Failed to open file");
     }
 }
 
@@ -274,7 +272,6 @@ void TextFilter::printDocEnd(uint8_t event, PrintDocEndCommand& data){
 
 void TextFilter::openReceipt2(int receiptType)
 {
-    qDebug() << "openReceipt2";
     if (!receiptOpened)
     {
         receiptOpened = true;
@@ -300,7 +297,6 @@ void TextFilter::printReceiptItem(ReceiptItemCommand& data)
 void TextFilter::printSale(uint8_t event, ReceiptItemCommand& data)
 {
     if (event == EVENT_AFTER){
-        qDebug() << "TextFilter::printSale";
         operatorNumber = data.operatorNumber;
         openReceipt2(SMFP_RECTYPE_SALE);
         printReceiptItem(data);
@@ -486,8 +482,6 @@ void TextFilter::addTrailer()
 
 void TextFilter::beginDocument(bool isDayClose)
 {
-    qDebug() << "beginDocument";
-
     connect();
     addHeader();
     addReceiptHeader(isDayClose);
@@ -501,8 +495,6 @@ void TextFilter::endDocument()
 
 void TextFilter::addReceiptHeader(bool isDayClose)
 {
-    qDebug() << "addReceiptHeader";
-
     QString line1 = "";
     QString line2 = "";
 

@@ -7,9 +7,10 @@
 #include "bluetoothport.h"
 #include "utils.h"
 
-BluetoothPort::BluetoothPort(QObject* parent)
+BluetoothPort::BluetoothPort(QObject* parent, Logger* logger)
     : QObject(parent)
 {
+    this->logger = logger;
     connected = false;
     this->address = "";
     readTimeout = 1000;
@@ -34,29 +35,29 @@ void BluetoothPort::setAddress(QString value)
 
 void BluetoothPort::socketConnected()
 {
-    qDebug() << "connected";
+    logger->write("connected");
     connected = true;
 }
 
 void BluetoothPort::socketDisconnected()
 {
-    qDebug() << "disconnected";
+    logger->write("disconnected");
     connected = false;
 }
 
 void BluetoothPort::socketError(QBluetoothSocket::SocketError error)
 {
-    qDebug() << "error: " << error;
+    logger->write("error: " + error);
 }
 
 void BluetoothPort::socketStateChanged(QBluetoothSocket::SocketState state)
 {
-    qDebug() << "stateChanged: " << state;
+    logger->write("stateChanged: " + state);
 }
 
 bool BluetoothPort::connectToDevice()
 {
-    qDebug() << "connectToDevice";
+    logger->write("connectToDevice");
 
     if (connected) return true;
     //QString suuid = "{00000000-deca-fade-deca-deafdecacaff}";
@@ -72,30 +73,30 @@ bool BluetoothPort::connectToDevice()
     {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         if (timer.elapsed() > connectTimeout) {
-            qCritical() << "Connect timeout error";
+            logger->write("Connect timeout error");
             return false;
         }
     }
-    qDebug() << "connectToDevice: OK";
+    logger->write("connectToDevice: OK");
     return true;
 }
 
 void BluetoothPort::disconnect()
 {
-    qDebug() << "disconnect()";
+    logger->write("disconnect()");
     if (!connected) return;
     socket->disconnectFromService();
 }
 
 void BluetoothPort::setReadTimeout(int value)
 {
-    qDebug() << "setReadTimeout(" << value << ")";
+    logger->write(QString("setReadTimeout(%1)").arg(value));
     readTimeout = value;
 }
 
 void BluetoothPort::setWriteTimeout(int value)
 {
-    qDebug() << "setWriteTimeout(" << value << ")";
+    logger->write(QString("setWriteTimeout(%1)").arg(value));
     writeTimeout = value;
 }
 
@@ -124,7 +125,7 @@ QByteArray BluetoothPort::readBytes(int count)
         socket->waitForReadyRead(readTimeout);
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         if (timer.elapsed() > readTimeout) {
-            qCritical() << "Timeout error";
+            logger->write("Timeout error");
             throw new PortException("Timeout error");
         }
     }

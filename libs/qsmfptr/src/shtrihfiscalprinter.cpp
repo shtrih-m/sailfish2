@@ -18,7 +18,8 @@
 #include <QByteArray>
 
 #include <vector>
-#include "ShtrihFiscalPrinter.h"
+
+#include "shtrihfiscalprinter.h"
 #include "ServerConnection.h"
 #include "fiscalprinter.h"
 #include "tlvtag.h"
@@ -28,7 +29,8 @@
 #include "JournalPrinter.h"
 #include "TextFilter.h"
 #include "XInputStream.h"
-#include "DebugUtils.h"
+#include "Logger.h"
+
 
 
 bool CsvTablesReader::isComment(QString line) {
@@ -64,7 +66,7 @@ QString CsvTablesReader::getParamStr(QString line, int index)
 
 void CsvTablesReader::load(QString fileName, PrinterFields fields)
 {
-    qDebug() << "CsvTablesReader::load(" << fileName << ")";
+    //logger->write(QString("CsvTablesReader::load(%1)").arg(fileName));
 
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly))
@@ -82,7 +84,7 @@ void CsvTablesReader::load(QString fileName, PrinterFields fields)
             if (beginIndex != -1)
             {
                 line = line.remove(0, beginIndex + modelNameTag.length()-1);
-                int endIndex = line.lastIndexOf(";");
+                int endIndex = line.lastIndexOf(");");
                 if (endIndex != -1){
                     line = line.left(endIndex);
                 }
@@ -109,12 +111,13 @@ void CsvTablesReader::load(QString fileName, PrinterFields fields)
         }
     }
     file.close();
-    qDebug() << "CsvTablesReader::load: OK";
+    //logger->write("CsvTablesReader::load: OK");
 }
 
-ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent)
+ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     : QObject(parent)
 {
+    this->logger = logger;
     mutex = new QMutex(QMutex::RecursionMode::Recursive);
     taxPassword = 0;
     usrPassword = 1;
@@ -156,13 +159,17 @@ ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
     delete journal;
 }
 
+Logger* ShtrihFiscalPrinter::getLogger(){
+    return logger;
+}
+
 bool ShtrihFiscalPrinter::getJournalEnabled(){
     return journalEnabled;
 }
 
 void ShtrihFiscalPrinter::setJournalEnabled(bool value)
 {
-    qDebug() << "setJournalEnabled: " << value;
+    logger->write("setJournalEnabled: " + value);
 
     journalEnabled = value;
     if (value)
@@ -230,10 +237,10 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
     int rc = 0;
     for (uint32_t i = 0; i < maxRetryCount; i++) {
         if (i != 0) {
-            qDebug() << "retry " << i;
+            logger->write("retry " + i);
         }
 
-        DebugUtils::writeTx(command.encode());
+        logger->writeTx(command.encode());
 
         lock();
         try{
@@ -245,10 +252,10 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
             unlock();
             exception.raise();
         }
-        DebugUtils::writeRx(command.getRxData());
+        logger->writeRx(command.getRxData());
         if (rc == 0) break;
 
-        qDebug() << "ERROR:  " << getErrorText2(rc);
+        logger->write("ERROR:  " + getErrorText2(rc));
 
         switch (rc) {
         case 0x50: {
@@ -285,9 +292,6 @@ int ShtrihFiscalPrinter::waitForPrinting()
         rc = readShortStatus(command);
         if (rc != 0)
             break;
-
-        //qDebug() << "mode: " << command.mode;
-        //qDebug() << "submode: " << command.submode;
 
         switch (command.submode) {
         case ECR_SUBMODE_IDLE: {
@@ -364,13 +368,12 @@ void ShtrihFiscalPrinter::connectDevice()
     {
         startFDOThread();
     }
-
-    qDebug() << "capLoadGraphics1: " << capLoadGraphics1;
-    qDebug() << "capLoadGraphics2: " << capLoadGraphics2;
-    qDebug() << "capLoadGraphics3: " << capLoadGraphics3;
-    qDebug() << "capPrintGraphics1: " << capPrintGraphics1;
-    qDebug() << "capPrintGraphics2: " << capPrintGraphics2;
-    qDebug() << "capPrintGraphics3: " << capPrintGraphics3;
+    logger->write("capLoadGraphics1: " + capLoadGraphics1);
+    logger->write("capLoadGraphics2: " + capLoadGraphics2);
+    logger->write("capLoadGraphics3: " + capLoadGraphics3);
+    logger->write("capPrintGraphics1: " + capPrintGraphics1);
+    logger->write("capPrintGraphics2: " + capPrintGraphics2);
+    logger->write("capPrintGraphics3: " + capPrintGraphics3);
 }
 
 bool ShtrihFiscalPrinter::isShtrihMobile(){
@@ -385,8 +388,7 @@ void ShtrihFiscalPrinter::disconnectDevice()
 
 void ShtrihFiscalPrinter::startFDOThread()
 {
-    qDebug() << "startFDOThread";
-
+    logger->write("startFDOThread");
     // read FDO server parameters
     serverParams.address = readTableStr(15, 1, 1);
     serverParams.port = readTableStr(15, 1, 2).toInt();
@@ -396,11 +398,11 @@ void ShtrihFiscalPrinter::startFDOThread()
     serverParams.writeTimeout = 20000;
     serverParams.connectRetries = 1;
 
-    qDebug() << "params.address: " << serverParams.address;
-    qDebug() << "params.port: " << serverParams.port;
-    qDebug() << "params.readTimeout: " << serverParams.readTimeout;
-    qDebug() << "params.writeTimeout: " << serverParams.writeTimeout;
-    qDebug() << "params.connectTimeout: " << serverParams.connectTimeout;
+    logger->write("params.address: " + serverParams.address);
+    logger->write("params.port: " + serverParams.port);
+    logger->write("params.readTimeout: " + serverParams.readTimeout);
+    logger->write("params.writeTimeout: " + serverParams.writeTimeout);
+    logger->write("params.connectTimeout: " + serverParams.connectTimeout);
 
 
     stopFlag = false;
@@ -417,7 +419,7 @@ void ShtrihFiscalPrinter::stopFDOThread()
 
 void ShtrihFiscalPrinter::sendDocuments()
 {
-    qDebug() << "sendDocuments";
+    logger->write("sendDocuments");
     while (!stopFlag)
     {
         try{
@@ -432,11 +434,11 @@ void ShtrihFiscalPrinter::sendDocuments()
         }
         catch(QException exception)
         {
-            qDebug() << "sendDocuments: failed";
+            logger->write("sendDocuments: failed");
         }
         QThread::msleep(pollInterval);
     }
-    qDebug() << "sendDocuments: OK";
+    logger->write("sendDocuments: OK");
 }
 
 void ShtrihFiscalPrinter::sendBlocks()
@@ -446,7 +448,7 @@ void ShtrihFiscalPrinter::sendBlocks()
     int docCount = 0;
     while ((fsReadDocCount(docCount) == 0)&&(docCount > 0))
     {
-        qDebug() << "docCount: " << docCount;
+        logger->write("docCount: " + docCount);
         if (readBlock(block))
         {
             if (sendBlock(block, answer))
@@ -460,9 +462,10 @@ void ShtrihFiscalPrinter::sendBlocks()
 
 bool ShtrihFiscalPrinter::sendBlock(QByteArray block, QByteArray& result)
 {
-    qDebug() << "sendBlock";
+    logger->write("sendBlock");
 
     OFDHeader header;
+    ServerConnection connection(logger);
     connection.setParams(serverParams);
     connection.connect();
     connection.write(block);
@@ -480,13 +483,13 @@ bool ShtrihFiscalPrinter::sendBlock(QByteArray block, QByteArray& result)
         result.append(readBlock);
     }
     connection.disconnect();
-    qDebug() << "sendBlock: OK";
+    logger->write("sendBlock: OK");
     return true;
 }
 
 int ShtrihFiscalPrinter::writeBlock(QByteArray block)
 {
-    qDebug() << "writeBlock, size: " << block.size();
+    logger->write("writeBlock, size: " + block.size());
 
     int rc = 0;
 
@@ -527,19 +530,19 @@ int ShtrihFiscalPrinter::writeBlock(QByteArray block)
         unlock();
         exception.raise();
     }
-    qDebug() << "writeBlock: OK";
+    logger->write("writeBlock: OK");
     return rc;
 }
 
 bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
 {
-    qDebug() << "readBlock";
+    logger->write("readBlock");
 
     lock();
     try{
         FSBufferStatus bufferStatus;
         check(fsReadBufferStatus(bufferStatus));
-        qDebug() << "bufferStatus.dataSize: " << bufferStatus.dataSize;
+        logger->write("bufferStatus.dataSize: "+ bufferStatus.dataSize);
 
         if (bufferStatus.dataSize <= 0) {
             unlock();
@@ -571,7 +574,7 @@ bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
         unlock();
         exception.raise();
     }
-    qDebug() << "readBlock: OK";
+    logger->write("readBlock: OK");
     return true;
 }
 
@@ -597,7 +600,7 @@ bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
 
 int ShtrihFiscalPrinter::startDump(StartDumpCommand& data)
 {
-    qDebug() << "startDump";
+    logger->write("startDump");
 
     PrinterCommand command(0x01);
     command.write(sysPassword, 4);
@@ -631,7 +634,7 @@ int ShtrihFiscalPrinter::startDump(StartDumpCommand& data)
 
 int ShtrihFiscalPrinter::readDump(ReadDumpCommand& data)
 {
-    qDebug() << "readDump";
+    logger->write("readDump");
 
     PrinterCommand command(0x02);
     command.write(sysPassword, 4);
@@ -654,7 +657,7 @@ int ShtrihFiscalPrinter::readDump(ReadDumpCommand& data)
 
 int ShtrihFiscalPrinter::stopDump(StopDumpCommand& data)
 {
-    qDebug() << "stopDump";
+    logger->write("stopDump");
 
     PrinterCommand command(0x03);
     command.write(sysPassword, 4);
@@ -679,7 +682,7 @@ int ShtrihFiscalPrinter::stopDump(StopDumpCommand& data)
 
 int ShtrihFiscalPrinter::fiscalizationLong(FiscalizationCommand& data)
 {
-    qDebug() << "fiscalization";
+    logger->write("fiscalization");
 
     PrinterCommand command(0x0D);
     command.write(taxPassword, 4);
@@ -707,7 +710,7 @@ int ShtrihFiscalPrinter::fiscalizationLong(FiscalizationCommand& data)
 
 int ShtrihFiscalPrinter::writeLongSerial(WriteLongSerialCommand& data)
 {
-    qDebug() << "addSerial";
+    logger->write("addSerial");
 
     PrinterCommand command(0x0E);
     command.write(taxPassword, 4);
@@ -728,7 +731,7 @@ int ShtrihFiscalPrinter::writeLongSerial(WriteLongSerialCommand& data)
 
 int ShtrihFiscalPrinter::readLongSerial(ReadLongSerialCommand& data)
 {
-    qDebug() << "readLongSerial";
+    logger->write("readLongSerial");
 
     PrinterCommand command(0x0F);
     command.write(usrPassword, 4);
@@ -763,7 +766,7 @@ int ShtrihFiscalPrinter::readLongSerial(ReadLongSerialCommand& data)
 
 int ShtrihFiscalPrinter::readShortStatus(ReadShortStatusCommand& data)
 {
-    //qDebug() << "readShortStatus";
+    logger->write("readShortStatus");
 
     PrinterCommand command(0x10);
     command.write(usrPassword, 4);
@@ -780,7 +783,6 @@ int ShtrihFiscalPrinter::readShortStatus(ReadShortStatusCommand& data)
         data.ejError = command.readChar();
         data.numOperations += (command.readChar() << 8);
         command.read((char*)data.reserved, sizeof(data.reserved));
-        //if command.
     }
     return data.resultCode;
 }
@@ -818,7 +820,7 @@ int ShtrihFiscalPrinter::readShortStatus(ReadShortStatusCommand& data)
 
 int ShtrihFiscalPrinter::readLongStatus(ReadLongStatusCommand& data)
 {
-    qDebug() << "readLongStatus";
+    logger->write("readLongStatus");
 
     PrinterCommand command(0x11);
     command.write(usrPassword, 4);
@@ -869,7 +871,7 @@ int ShtrihFiscalPrinter::readLongStatus(ReadLongStatusCommand& data)
 
 int ShtrihFiscalPrinter::printBold(PrintBoldCommand& data)
 {
-    qDebug() << "printBold";
+    logger->write("printBold");
 
     PrinterCommand command(0x12);
     command.write(usrPassword, 4);
@@ -895,7 +897,7 @@ int ShtrihFiscalPrinter::printBold(PrintBoldCommand& data)
 
 int ShtrihFiscalPrinter::beep(BeepCommand& data)
 {
-    qDebug() << "beep";
+    logger->write("beep");
 
     PrinterCommand command(0x13);
     command.write(usrPassword, 4);
@@ -920,7 +922,7 @@ int ShtrihFiscalPrinter::beep(BeepCommand& data)
 
 int ShtrihFiscalPrinter::writePortParameters(PortParametersCommand& data)
 {
-    qDebug() << "writePortParameters";
+    logger->write("writePortParameters");
 
     PrinterCommand command(0x14);
     command.write(sysPassword, 4);
@@ -944,7 +946,7 @@ int ShtrihFiscalPrinter::writePortParameters(PortParametersCommand& data)
 
 int ShtrihFiscalPrinter::readPortParameters(PortParametersCommand& data)
 {
-    qDebug() << "readPortParameters";
+    logger->write("readPortParameters");
 
     PrinterCommand command(0x15);
     command.write(sysPassword, 4);
@@ -966,7 +968,7 @@ int ShtrihFiscalPrinter::readPortParameters(PortParametersCommand& data)
 
 int ShtrihFiscalPrinter::resetMemory()
 {
-    qDebug() << "resetMemory";
+    logger->write("resetMemory");
     PrinterCommand command(0x16);
     return send(command);
 }
@@ -984,7 +986,7 @@ int ShtrihFiscalPrinter::resetMemory()
 
 int ShtrihFiscalPrinter::printString(PrintStringCommand& data)
 {
-    qDebug() << "printString";
+    logger->write("printString");
     filter->printString(EVENT_BEFORE, data);
 
     PrinterCommand command(0x17);
@@ -1013,7 +1015,7 @@ int ShtrihFiscalPrinter::printString(PrintStringCommand& data)
 
 int ShtrihFiscalPrinter::printDocHeader(PrintDocHeaderCommand& data)
 {
-    qDebug() << "printDocHeader";
+    logger->write("printDocHeader");
 
     filter->printDocHeader(EVENT_BEFORE, data);
     PrinterCommand command(0x18);
@@ -1042,7 +1044,7 @@ int ShtrihFiscalPrinter::printDocHeader(PrintDocHeaderCommand& data)
 
 int ShtrihFiscalPrinter::startTest(StartTestCommand& data)
 {
-    qDebug() << "startTest";
+    logger->write("startTest");
 
     PrinterCommand command(0x19);
     command.write(usrPassword, 4);
@@ -1067,7 +1069,7 @@ int ShtrihFiscalPrinter::startTest(StartTestCommand& data)
 
 int ShtrihFiscalPrinter::readRegister(ReadCashRegCommand& data)
 {
-    qDebug() << "read cash register";
+    logger->write("read cash register");
 
     PrinterCommand command(0x1A);
     command.write(usrPassword, 4);
@@ -1093,7 +1095,7 @@ int ShtrihFiscalPrinter::readRegister(ReadCashRegCommand& data)
 
 int ShtrihFiscalPrinter::readRegister(ReadOperRegCommand& data)
 {
-    qDebug() << "read operation register";
+    logger->write("read operation register");
 
     PrinterCommand command(0x1B);
     command.write(usrPassword, 4);
@@ -1117,7 +1119,7 @@ int ShtrihFiscalPrinter::readRegister(ReadOperRegCommand& data)
 
 int ShtrihFiscalPrinter::writeLicense(LicenseCommand& data)
 {
-    qDebug() << "writeLicense";
+    logger->write("writeLicense");
     PrinterCommand command(0x1C);
     command.write(sysPassword, 4);
     command.write(data.license, 5);
@@ -1136,7 +1138,7 @@ int ShtrihFiscalPrinter::writeLicense(LicenseCommand& data)
 
 int ShtrihFiscalPrinter::readLicense(LicenseCommand& data)
 {
-    qDebug() << "readLicense";
+    logger->write("readLicense");
     PrinterCommand command(0x1D);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -1160,7 +1162,7 @@ int ShtrihFiscalPrinter::readLicense(LicenseCommand& data)
 
 int ShtrihFiscalPrinter::writeTable(TableValueCommand& data)
 {
-    qDebug() << "writeTable";
+    logger->write("writeTable");
 
     PrinterCommand command(0x1E);
     command.write(sysPassword, 4);
@@ -1186,7 +1188,7 @@ int ShtrihFiscalPrinter::writeTable(TableValueCommand& data)
 
 int ShtrihFiscalPrinter::readTable(TableValueCommand& data)
 {
-    qDebug() << "readTable";
+    logger->write("readTable");
 
     PrinterCommand command(0x1F);
     command.write(sysPassword, 4);
@@ -1211,7 +1213,7 @@ int ShtrihFiscalPrinter::readTable(TableValueCommand& data)
 
 int ShtrihFiscalPrinter::writePoint(PointCommand& data)
 {
-    qDebug() << "writePoint";
+    logger->write("writePoint");
 
     PrinterCommand command(0x20);
     command.write(sysPassword, 4);
@@ -1231,7 +1233,7 @@ int ShtrihFiscalPrinter::writePoint(PointCommand& data)
 
 int ShtrihFiscalPrinter::writeTime(TimeCommand& data)
 {
-    qDebug() << "write";
+    logger->write("write");
 
     PrinterCommand command(0x21);
     command.write(sysPassword, 4);
@@ -1251,7 +1253,7 @@ int ShtrihFiscalPrinter::writeTime(TimeCommand& data)
 
 int ShtrihFiscalPrinter::writeDate(DateCommand& data)
 {
-    qDebug() << "write";
+    logger->write("write");
 
     PrinterCommand command(0x22);
     command.write(sysPassword, 4);
@@ -1271,7 +1273,7 @@ int ShtrihFiscalPrinter::writeDate(DateCommand& data)
 
 int ShtrihFiscalPrinter::confirmDate(DateCommand& data)
 {
-    qDebug() << "confirmDate";
+    logger->write("confirmDate");
 
     PrinterCommand command(0x23);
     command.write(sysPassword, 4);
@@ -1290,7 +1292,7 @@ int ShtrihFiscalPrinter::confirmDate(DateCommand& data)
 
 int ShtrihFiscalPrinter::initTables(PasswordCommand& data)
 {
-    qDebug() << "initTables";
+    logger->write("initTables");
 
     PrinterCommand command(0x24);
     command.write(sysPassword, 4);
@@ -1310,7 +1312,7 @@ int ShtrihFiscalPrinter::initTables(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::cutPaper(CutCommand& data)
 {
-    qDebug() << "cutPaper";
+    logger->write("cutPaper");
 
     filter->cutPaper(EVENT_BEFORE, data);
     PrinterCommand command(0x25);
@@ -1340,7 +1342,7 @@ int ShtrihFiscalPrinter::cutPaper(CutCommand& data)
 
 int ShtrihFiscalPrinter::readFont(ReadFontCommand& data)
 {
-    qDebug() << "readFont";
+    logger->write("readFont");
 
     PrinterCommand command(0x26);
     command.write(sysPassword, 4);
@@ -1365,7 +1367,7 @@ int ShtrihFiscalPrinter::readFont(ReadFontCommand& data)
 
 int ShtrihFiscalPrinter::softReset()
 {
-    qDebug() << "softReset";
+    logger->write("softReset");
 
     PrinterCommand command(0x27);
     command.write(sysPassword, 4);
@@ -1384,7 +1386,7 @@ int ShtrihFiscalPrinter::softReset()
 
 int ShtrihFiscalPrinter::openDrawer(OpenDrawerCommand& data)
 {
-    qDebug() << "openDrawer";
+    logger->write("openDrawer");
 
     PrinterCommand command(0x28);
     command.write(usrPassword, 4);
@@ -1412,7 +1414,7 @@ int ShtrihFiscalPrinter::openDrawer(OpenDrawerCommand& data)
 
 int ShtrihFiscalPrinter::feedPaper(FeedPaperCommand& data)
 {
-    qDebug() << "feedPaper";
+    logger->write("feedPaper");
 
     filter->feedPaper(EVENT_BEFORE, data);
     PrinterCommand command(0x29);
@@ -1440,7 +1442,7 @@ int ShtrihFiscalPrinter::feedPaper(FeedPaperCommand& data)
 
 int ShtrihFiscalPrinter::slipEject(SlipEjectCommand& data)
 {
-    qDebug() << "slipEject";
+    logger->write("slipEject");
 
     PrinterCommand command(0x2A);
     command.write(usrPassword, 4);
@@ -1463,7 +1465,7 @@ int ShtrihFiscalPrinter::slipEject(SlipEjectCommand& data)
 
 int ShtrihFiscalPrinter::stopTest(PasswordCommand& data)
 {
-    qDebug() << "stopTest";
+    logger->write("stopTest");
 
     PrinterCommand command(0x2B);
     command.write(usrPassword, 4);
@@ -1485,7 +1487,7 @@ int ShtrihFiscalPrinter::stopTest(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printRegisters(PasswordCommand& data)
 {
-    qDebug() << "printRegisters";
+    logger->write("printRegisters");
     PrinterCommand command(0x2C);
     command.write(usrPassword, 4);
     data.resultCode = send(command);
@@ -1509,7 +1511,7 @@ int ShtrihFiscalPrinter::printRegisters(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::readTableInfo(TableInfoCommand& data)
 {
-    qDebug() << "readTableInfo";
+    logger->write("readTableInfo");
     PrinterCommand command(0x2D);
     command.write(sysPassword, 4);
     command.write(data.table, 1);
@@ -1539,7 +1541,7 @@ int ShtrihFiscalPrinter::readTableInfo(TableInfoCommand& data)
 
 int ShtrihFiscalPrinter::readFieldInfo(FieldInfoCommand& data)
 {
-    qDebug() << "readFieldInfo";
+    logger->write("readFieldInfo");
 
     PrinterCommand command(0x2E);
     command.write(sysPassword, 4);
@@ -1574,7 +1576,7 @@ int ShtrihFiscalPrinter::readFieldInfo(FieldInfoCommand& data)
 
 int ShtrihFiscalPrinter::printStringFont(PrintStringFontCommand& data)
 {
-    qDebug() << "printStringFont";
+    logger->write("printStringFont");
 
     filter->printStringFont(EVENT_BEFORE, data);
     PrinterCommand command(0x2F);
@@ -1602,7 +1604,7 @@ int ShtrihFiscalPrinter::printStringFont(PrintStringFontCommand& data)
 
 int ShtrihFiscalPrinter::printXReport(PasswordCommand& data)
 {
-    qDebug() << "printXReport";
+    logger->write("printXReport");
     filter->printXReport(EVENT_BEFORE, data);
     PrinterCommand command(0x40);
     command.write(sysPassword, 4);
@@ -1625,7 +1627,7 @@ int ShtrihFiscalPrinter::printXReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printZReport(PasswordCommand& data)
 {
-    qDebug() << "printZReport";
+    logger->write("printZReport");
     filter->printZReport(EVENT_BEFORE, data);
     PrinterCommand command(0x41);
     command.write(sysPassword, 4);
@@ -1648,7 +1650,7 @@ int ShtrihFiscalPrinter::printZReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printDepartmentReport(PasswordCommand& data)
 {
-    qDebug() << "printDepartmentReport";
+    logger->write("printDepartmentReport");
     PrinterCommand command(0x42);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -1669,7 +1671,7 @@ int ShtrihFiscalPrinter::printDepartmentReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printTaxReport(PasswordCommand& data)
 {
-    qDebug() << "printTaxReport";
+    logger->write("printTaxReport");
     PrinterCommand command(0x43);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -1692,7 +1694,7 @@ int ShtrihFiscalPrinter::printTaxReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printCashierReport(PasswordCommand& data)
 {
-    qDebug() << "printCashierReport";
+    logger->write("printCashierReport");
     PrinterCommand command(0x44);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -1715,7 +1717,7 @@ int ShtrihFiscalPrinter::printCashierReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printHourReport(PasswordCommand& data)
 {
-    qDebug() << "printHourReport";
+    logger->write("printHourReport");
     PrinterCommand command(0x45);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -1737,7 +1739,7 @@ int ShtrihFiscalPrinter::printHourReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printItemsReport(PasswordCommand& data)
 {
-    qDebug() << "printItemsReport";
+    logger->write("printItemsReport");
     PrinterCommand command(0x46);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -1763,7 +1765,7 @@ int ShtrihFiscalPrinter::printItemsReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printGraphics3(PrintGraphics3Command& data)
 {
-    qDebug() << "printGraphics3" << data.startLine;
+    logger->write("printGraphics3" + data.startLine);
 
     PrinterCommand command(0x4D);
     command.write(usrPassword, 4);
@@ -1795,7 +1797,7 @@ int ShtrihFiscalPrinter::printGraphics3(PrintGraphics3Command& data)
 
 int ShtrihFiscalPrinter::loadGraphics3(LoadGraphics3Command& data)
 {
-    qDebug() << "loadGraphics3" << data.startLine;
+    logger->write("loadGraphics3" + data.startLine);
 
     PrinterCommand command(0x4E);
     command.write(usrPassword, 4);
@@ -1826,7 +1828,7 @@ int ShtrihFiscalPrinter::loadGraphics3(LoadGraphics3Command& data)
 
 int ShtrihFiscalPrinter::printScaledGraphics(ScaledGraphicsCommand& data)
 {
-    qDebug() << "printScaledGraphics";
+    logger->write("printScaledGraphics");
 
     PrinterCommand command(0x4F);
     command.write(usrPassword, 4);
@@ -1854,7 +1856,7 @@ int ShtrihFiscalPrinter::printScaledGraphics(ScaledGraphicsCommand& data)
 
 int ShtrihFiscalPrinter::printCashIn(CashCommand& data)
 {
-    qDebug() << "printCashIn";
+    logger->write("printCashIn");
 
     filter->printCashIn(EVENT_BEFORE, data);
     PrinterCommand command(0x50);
@@ -1883,7 +1885,7 @@ int ShtrihFiscalPrinter::printCashIn(CashCommand& data)
 
 int ShtrihFiscalPrinter::printCashOut(CashCommand& data)
 {
-    qDebug() << "printCashOut";
+    logger->write("printCashOut");
 
     filter->printCashOut(EVENT_BEFORE, data);
     PrinterCommand command(0x51);
@@ -1910,7 +1912,7 @@ int ShtrihFiscalPrinter::printCashOut(CashCommand& data)
 
 int ShtrihFiscalPrinter::printHeader(PasswordCommand& data)
 {
-    qDebug() << "printHeader";
+    logger->write("printHeader");
     filter->printHeader(EVENT_BEFORE, data);
 
     PrinterCommand command(0x52);
@@ -1937,8 +1939,7 @@ int ShtrihFiscalPrinter::printHeader(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printDocEnd(PrintDocEndCommand& data)
 {
-    qDebug() << "printDocEnd";
-
+    logger->write("printDocEnd");
     filter->printDocEnd(EVENT_BEFORE, data);
     PrinterCommand command(0x53);
     command.write(usrPassword, 4);
@@ -1962,7 +1963,7 @@ int ShtrihFiscalPrinter::printDocEnd(PrintDocEndCommand& data)
 
 int ShtrihFiscalPrinter::printTrailer(PasswordCommand& data)
 {
-    qDebug() << "printTrailer";
+    logger->write("printTrailer");
     filter->printTrailer(EVENT_BEFORE, data);
     PrinterCommand command(0x54);
     command.write(usrPassword, 4);
@@ -1985,8 +1986,7 @@ int ShtrihFiscalPrinter::printTrailer(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::writeSerial(WriteSerialCommand& data)
 {
-    qDebug() << "writeSerial";
-
+    logger->write("writeSerial");
     PrinterCommand command(0x60);
     command.write(taxPassword, 4);
     command.write(data.serial, 4);
@@ -2003,8 +2003,7 @@ int ShtrihFiscalPrinter::writeSerial(WriteSerialCommand& data)
 
 int ShtrihFiscalPrinter::resetFM(int& resultCode)
 {
-    qDebug() << "resetFM";
-
+    logger->write("resetFM");
     PrinterCommand command(0x61);
     resultCode = send(command);
     return resultCode;
@@ -2026,8 +2025,7 @@ int ShtrihFiscalPrinter::resetFM(int& resultCode)
 
 int ShtrihFiscalPrinter::fmReadTotals(FMReadTotalsCommand& data)
 {
-    qDebug() << "fmReadTotals";
-
+    logger->write("fmReadTotals");
     PrinterCommand command(0x62);
     command.write(sysPassword, 4);
     command.write(data.type, 1);
@@ -2056,8 +2054,7 @@ int ShtrihFiscalPrinter::fmReadTotals(FMReadTotalsCommand& data)
 
 int ShtrihFiscalPrinter::fmReadLastDate(FMReadLastDateCommand& data)
 {
-    qDebug() << "fmReadLastDate";
-
+    logger->write("fmReadLastDate");
     PrinterCommand command(0x63);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -2083,8 +2080,7 @@ int ShtrihFiscalPrinter::fmReadLastDate(FMReadLastDateCommand& data)
 
 int ShtrihFiscalPrinter::fmReadRange(FMReadRangeCommand& data)
 {
-    qDebug() << "fmReadRange";
-
+    logger->write("fmReadRange");
     PrinterCommand command(0x64);
     command.write(taxPassword, 4);
     data.resultCode = send(command);
@@ -2114,7 +2110,7 @@ int ShtrihFiscalPrinter::fmReadRange(FMReadRangeCommand& data)
 
 int ShtrihFiscalPrinter::fiscalization(FiscalizationCommand& data)
 {
-    qDebug() << "fiscalization";
+    logger->write("fiscalization");
 
     PrinterCommand command(0x65);
     command.write(taxPassword, 4);
@@ -2148,7 +2144,7 @@ int ShtrihFiscalPrinter::fiscalization(FiscalizationCommand& data)
 
 int ShtrihFiscalPrinter::fmDatesReport(FMDatesReportCommand& data)
 {
-    qDebug() << "fmDatesReport";
+    logger->write("fmDatesReport");
 
     PrinterCommand command(0x66);
     command.write(taxPassword, 4);
@@ -2182,7 +2178,7 @@ int ShtrihFiscalPrinter::fmDatesReport(FMDatesReportCommand& data)
 
 int ShtrihFiscalPrinter::fmDaysReport(FMDaysReportCommand& data)
 {
-    qDebug() << "fmDaysReport";
+    logger->write("fmDaysReport");
 
     PrinterCommand command(0x67);
     command.write(taxPassword, 4);
@@ -2209,7 +2205,7 @@ int ShtrihFiscalPrinter::fmDaysReport(FMDaysReportCommand& data)
 
 int ShtrihFiscalPrinter::fmCancelReport(PasswordCommand& data)
 {
-    qDebug() << "fmCancelReport";
+    logger->write("fmCancelReport");
     PrinterCommand command(0x68);
     command.write(taxPassword, 4);
     data.resultCode = send(command);
@@ -2232,7 +2228,7 @@ int ShtrihFiscalPrinter::fmCancelReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::fmReadFiscalization(FMReadFiscalizationCommand& data)
 {
-    qDebug() << "fmReadFiscalization";
+    logger->write("fmReadFiscalization");
 
     PrinterCommand command(0x69);
     command.write(taxPassword, 4);
@@ -2267,7 +2263,7 @@ F7H).
 
 int ShtrihFiscalPrinter::fmReadCorruptedRecords(FMReadCorruptedRecordsCommand& data)
 {
-    qDebug() << "fmReadCorruptedRecords";
+    logger->write("fmReadCorruptedRecords");
 
     PrinterCommand command(0x6A);
     command.write(sysPassword, 4);
@@ -2291,7 +2287,7 @@ int ShtrihFiscalPrinter::fmReadCorruptedRecords(FMReadCorruptedRecordsCommand& d
 
 int ShtrihFiscalPrinter::readErrorText(ReadErrorTextCommand& data)
 {
-    qDebug() << "readErrorText";
+    logger->write("readErrorText");
 
     PrinterCommand command(0x6B);
     command.write(data.errorCode, 1);
@@ -2361,7 +2357,7 @@ void ShtrihFiscalPrinter::write(PrinterCommand& command, SlipDocParams data)
 
 int ShtrihFiscalPrinter::slipOpenDocument(SlipOpenDocumentCommand& data)
 {
-    qDebug() << "fmReadFiscalization";
+    logger->write("fmReadFiscalization");
 
     PrinterCommand command(0x70);
     command.write(usrPassword, 4);
@@ -2407,7 +2403,7 @@ void ShtrihFiscalPrinter::write(PrinterCommand& command, StdSlipParams data)
 
 int ShtrihFiscalPrinter::slipOpenStdDocument(SlipOpenStdDocumentCommand& data)
 {
-    qDebug() << "slipOpenStdDocument";
+    logger->write("slipOpenStdDocument");
 
     PrinterCommand command(0x71);
     command.write(usrPassword, 4);
@@ -2499,7 +2495,7 @@ void ShtrihFiscalPrinter::write(PrinterCommand& command, SlipOperation data)
 
 int ShtrihFiscalPrinter::slipPrintItem(SlipPrintItemCommand& data)
 {
-    qDebug() << "slipPrintItem";
+    logger->write("slipPrintItem");
 
     PrinterCommand command(0x72);
     command.write(usrPassword, 4);
@@ -2799,7 +2795,7 @@ int ShtrihFiscalPrinter::slipPrintItem(SlipPrintItemCommand& data)
 
 int ShtrihFiscalPrinter::printLine(QString text)
 {
-    qDebug() << "printLine " << text;
+    logger->write("printLine " + text);
     PrintStringCommand command;
     command.flags = SMFP_STATION_REC;
     command.text = text;
@@ -2827,13 +2823,13 @@ int ShtrihFiscalPrinter::getLineLength(int font)
         }
         len = lineLength[font - 1];
     }
-    qDebug() << "getLineLength: " << len;
+    logger->write("getLineLength: " + len);
     return len;
 }
 
 QStringList ShtrihFiscalPrinter::splitText(QString text, int font)
 {
-    qDebug() << "splitText";
+    logger->write("splitText");
     int lineLength = getLineLength(font);
     QStringList list = text.split(QRegExp("\n|\r\n|\r"));
     int index = 0;
@@ -2908,7 +2904,7 @@ int ShtrihFiscalPrinter::execute(int code, ReceiptItemCommand& data)
 
 int ShtrihFiscalPrinter::printSale(ReceiptItemCommand& data)
 {
-    qDebug() << "printSale";
+    logger->write("printSale");
 
     filter->printSale(EVENT_BEFORE, data);
 
@@ -2942,7 +2938,7 @@ int ShtrihFiscalPrinter::printSale(ReceiptItemCommand& data)
 
 int ShtrihFiscalPrinter::printBuy(ReceiptItemCommand& data)
 {
-    qDebug() << "printBuy";
+    logger->write("printBuy");
 
     filter->printBuy(EVENT_BEFORE, data);
     // Open fiscal day for fiscal storage
@@ -2975,7 +2971,7 @@ int ShtrihFiscalPrinter::printBuy(ReceiptItemCommand& data)
 
 int ShtrihFiscalPrinter::printRetSale(ReceiptItemCommand& data)
 {
-    qDebug() << "printRetSale";
+    logger->write("printRetSale");
 
     filter->printRetSale(EVENT_BEFORE, data);
     // Open fiscal day for fiscal storage
@@ -3008,7 +3004,7 @@ int ShtrihFiscalPrinter::printRetSale(ReceiptItemCommand& data)
 
 int ShtrihFiscalPrinter::printRetBuy(ReceiptItemCommand& data)
 {
-    qDebug() << "printRetBuy";
+    logger->write("printRetBuy");
 
     filter->printRetBuy(EVENT_BEFORE, data);
     // Open fiscal day for fiscal storage
@@ -3041,7 +3037,7 @@ int ShtrihFiscalPrinter::printRetBuy(ReceiptItemCommand& data)
 
 int ShtrihFiscalPrinter::printStorno(ReceiptItemCommand& data)
 {
-    qDebug() << "printStorno";
+    logger->write("printStorno");
     filter->printStorno(EVENT_BEFORE, data);
     execute(0x84, data);
     if (succeeded(data.resultCode)){
@@ -3080,7 +3076,7 @@ void ShtrihFiscalPrinter::beforeCloseReceipt()
 
 int ShtrihFiscalPrinter::closeReceipt(CloseReceiptCommand& data)
 {
-    qDebug() << "closeReceipt";
+    logger->write("closeReceipt");
 
     beforeCloseReceipt();
     filter->closeReceipt(EVENT_BEFORE, data);
@@ -3114,7 +3110,7 @@ int getNextDocNumber(int value)
 
 int ShtrihFiscalPrinter::closeReceipt2(CloseReceiptCommand2& data)
 {
-    qDebug() << "closeReceipt2";
+    logger->write("closeReceipt2");
 
     ReadLongStatusCommand status;
     int rc = readLongStatus(status);
@@ -3147,7 +3143,7 @@ int ShtrihFiscalPrinter::closeReceipt2(CloseReceiptCommand2& data)
 
 int ShtrihFiscalPrinter::printDiscount(AmountAjustCommand& data)
 {
-    qDebug() << "printDiscount";
+    logger->write("printDiscount");
     filter->printDiscount(EVENT_BEFORE, data);
     printAmountAjustment(0x86, data);
     if (succeeded(data.resultCode)){
@@ -3173,7 +3169,7 @@ int ShtrihFiscalPrinter::printDiscount(AmountAjustCommand& data)
 
 int ShtrihFiscalPrinter::printCharge(AmountAjustCommand& data)
 {
-    qDebug() << "printCharge";
+    logger->write("printCharge");
     filter->printCharge(EVENT_BEFORE, data);
     printAmountAjustment(0x87, data);
     if (succeeded(data.resultCode)){
@@ -3210,7 +3206,7 @@ int ShtrihFiscalPrinter::printAmountAjustment(int code, AmountAjustCommand& data
 
 int ShtrihFiscalPrinter::cancelReceipt(PasswordCommand& data)
 {
-    qDebug() << "cancelReceipt";
+    logger->write("cancelReceipt");
     filter->cancelReceipt(EVENT_BEFORE, data);
     PrinterCommand command(0x88);
     command.write(usrPassword, 4);
@@ -3234,7 +3230,7 @@ int ShtrihFiscalPrinter::cancelReceipt(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::readSubtotal(ReadSubtotalCommand& data)
 {
-    qDebug() << "readSubtotal";
+    logger->write("readSubtotal");
 
     PrinterCommand command(0x89);
     command.write(usrPassword, 4);
@@ -3263,7 +3259,7 @@ int ShtrihFiscalPrinter::readSubtotal(ReadSubtotalCommand& data)
 
 int ShtrihFiscalPrinter::printDiscountStorno(AmountAjustCommand& data)
 {
-    qDebug() << "printDiscountStorno";
+    logger->write("printDiscountStorno");
     filter->printDiscountStorno(EVENT_BEFORE, data);
     printAmountAjustment(0x8A, data);
     if (succeeded(data.resultCode)){
@@ -3289,7 +3285,7 @@ int ShtrihFiscalPrinter::printDiscountStorno(AmountAjustCommand& data)
 
 int ShtrihFiscalPrinter::printChargeStorno(AmountAjustCommand& data)
 {
-    qDebug() << "printChargeStorno";
+    logger->write("printChargeStorno");
     filter->printChargeStorno(EVENT_BEFORE, data);
     printAmountAjustment(0x8B, data);
     if (succeeded(data.resultCode)){
@@ -3309,7 +3305,7 @@ int ShtrihFiscalPrinter::printChargeStorno(AmountAjustCommand& data)
 
 int ShtrihFiscalPrinter::printCopy(PasswordCommand& data)
 {
-    qDebug() << "printCopy";
+    logger->write("printCopy");
     PrinterCommand command(0x8C);
     command.write(usrPassword, 4);
     data.resultCode = send(command);
@@ -3334,7 +3330,7 @@ int ShtrihFiscalPrinter::printCopy(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::openFiscalDay()
 {
-    qDebug() << "openFiscalDay";
+    logger->write("openFiscalDay");
 
     int rc = 0;
     if (!isDayOpened())
@@ -3350,7 +3346,7 @@ int ShtrihFiscalPrinter::openFiscalDay()
 
 int ShtrihFiscalPrinter::openReceipt(OpenReceiptCommand& data)
 {
-    qDebug() << "openReceipt";
+    logger->write("openReceipt");
 
     filter->openReceipt(EVENT_BEFORE, data);
     // Open fiscal day for fiscal storage
@@ -3384,7 +3380,7 @@ int ShtrihFiscalPrinter::openReceipt(OpenReceiptCommand& data)
 
 int ShtrihFiscalPrinter::printEJDepartmentReportOnDates(PrintEJDepartmentReportOnDates& data)
 {
-    qDebug() << "printEJDepartmentReportOnDates";
+    logger->write("printEJDepartmentReportOnDates");
     PrinterCommand command(0xA0);
     command.write(sysPassword, 4);
     command.write(data.reportType, 1);
@@ -3411,7 +3407,7 @@ int ShtrihFiscalPrinter::printEJDepartmentReportOnDates(PrintEJDepartmentReportO
 
 int ShtrihFiscalPrinter::printEJDepartmentReportOnDays(PrintEJDepartmentReportOnDays& data)
 {
-    qDebug() << "printEJDepartmentReportOnDays";
+    logger->write("printEJDepartmentReportOnDays");
     PrinterCommand command(0xA1);
     command.write(sysPassword, 4);
     command.write(data.reportType, 1);
@@ -3437,7 +3433,7 @@ int ShtrihFiscalPrinter::printEJDepartmentReportOnDays(PrintEJDepartmentReportOn
 
 int ShtrihFiscalPrinter::printEJDayReportOnDates(PrintEJDayReportOnDates& data)
 {
-    qDebug() << "printEJDayReportOnDates";
+    logger->write("printEJDayReportOnDates");
     PrinterCommand command(0xA1);
     command.write(sysPassword, 4);
     command.write(data.reportType, 1);
@@ -3462,7 +3458,7 @@ int ShtrihFiscalPrinter::printEJDayReportOnDates(PrintEJDayReportOnDates& data)
 
 int ShtrihFiscalPrinter::printEJDayReportOnDays(PrintEJDayReportOnDays& data)
 {
-    qDebug() << "printEJDayReportOnDays";
+    logger->write("printEJDayReportOnDays");
     PrinterCommand command(0xA3);
     command.write(sysPassword, 4);
     command.write(data.reportType, 1);
@@ -3485,7 +3481,7 @@ int ShtrihFiscalPrinter::printEJDayReportOnDays(PrintEJDayReportOnDays& data)
 
 int ShtrihFiscalPrinter::printEJDayTotal(PrintEJDayTotal& data)
 {
-    qDebug() << "printEJDayTotal";
+    logger->write("printEJDayTotal");
     PrinterCommand command(0xA4);
     command.write(sysPassword, 4);
     command.write(data.day, 2);
@@ -3506,7 +3502,7 @@ int ShtrihFiscalPrinter::printEJDayTotal(PrintEJDayTotal& data)
 
 int ShtrihFiscalPrinter::printEJDocument(PrintEJDocument& data)
 {
-    qDebug() << "printEJDocument";
+    logger->write("printEJDocument");
     PrinterCommand command(0xA5);
     command.write(sysPassword, 4);
     command.write(data.macNumber, 4);
@@ -3527,7 +3523,7 @@ int ShtrihFiscalPrinter::printEJDocument(PrintEJDocument& data)
 
 int ShtrihFiscalPrinter::printEJDayReport(PrintEJDayReport& data)
 {
-    qDebug() << "printEJDayReport";
+    logger->write("printEJDayReport");
     PrinterCommand command(0xA6);
     command.write(sysPassword, 4);
     command.write(data.day, 2);
@@ -3547,7 +3543,7 @@ int ShtrihFiscalPrinter::printEJDayReport(PrintEJDayReport& data)
 
 int ShtrihFiscalPrinter::stopEJPrint()
 {
-    qDebug() << "stopEJPrint";
+    logger->write("stopEJPrint");
     PrinterCommand command(0xA7);
     command.write(sysPassword, 4);
     return send(command);
@@ -3563,7 +3559,7 @@ int ShtrihFiscalPrinter::stopEJPrint()
 
 int ShtrihFiscalPrinter::printEJActivationReport()
 {
-    qDebug() << "printEJActivationReport";
+    logger->write("printEJActivationReport");
     PrinterCommand command(0xA8);
     command.write(sysPassword, 4);
     return send(command);
@@ -3579,7 +3575,7 @@ int ShtrihFiscalPrinter::printEJActivationReport()
 
 int ShtrihFiscalPrinter::activateEJ()
 {
-    qDebug() << "activateEJ";
+    logger->write("activateEJ");
     PrinterCommand command(0xA9);
     command.write(sysPassword, 4);
     return send(command);
@@ -3595,7 +3591,7 @@ int ShtrihFiscalPrinter::activateEJ()
 
 int ShtrihFiscalPrinter::closeEJArchive()
 {
-    qDebug() << "closeEJArchive";
+    logger->write("closeEJArchive");
     PrinterCommand command(0xAA);
     command.write(sysPassword, 4);
     return send(command);
@@ -3612,7 +3608,7 @@ int ShtrihFiscalPrinter::closeEJArchive()
 
 int ShtrihFiscalPrinter::readEJSerial(ReadEJSerial& data)
 {
-    qDebug() << "readEJSerial";
+    logger->write("readEJSerial");
     PrinterCommand command(0xAB);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -3632,7 +3628,7 @@ int ShtrihFiscalPrinter::readEJSerial(ReadEJSerial& data)
 
 int ShtrihFiscalPrinter::cancelEJDocument()
 {
-    qDebug() << "cancelEJDocument";
+    logger->write("cancelEJDocument");
     PrinterCommand command(0xAC);
     command.write(sysPassword, 4);
     return send(command);
@@ -3666,7 +3662,7 @@ EJFlags ShtrihFiscalPrinter::decodeEJFlags(uint8_t value){
 
 int ShtrihFiscalPrinter::readEJStatus1(ReadEJStatus1& data)
 {
-    qDebug() << "readEJStatus1";
+    logger->write("readEJStatus1");
     PrinterCommand command(0xAD);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -3696,7 +3692,7 @@ int ShtrihFiscalPrinter::readEJStatus1(ReadEJStatus1& data)
 
 int ShtrihFiscalPrinter::readEJStatus2(ReadEJStatus2& data)
 {
-    qDebug() << "readEJStatus2";
+    logger->write("readEJStatus2");
     PrinterCommand command(0xAE);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -3720,7 +3716,7 @@ int ShtrihFiscalPrinter::readEJStatus2(ReadEJStatus2& data)
 
 int ShtrihFiscalPrinter::testEJArchive()
 {
-    qDebug() << "testEJArchive";
+    logger->write("testEJArchive");
     PrinterCommand command(0xAF);
     command.write(sysPassword, 4);
     return send(command);
@@ -3737,7 +3733,7 @@ int ShtrihFiscalPrinter::testEJArchive()
 
 int ShtrihFiscalPrinter::readEJVersion(ReadEJVersion& data)
 {
-    qDebug() << "readEJVersion";
+    logger->write("readEJVersion");
     PrinterCommand command(0xB1);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -3759,7 +3755,7 @@ int ShtrihFiscalPrinter::readEJVersion(ReadEJVersion& data)
 
 int ShtrihFiscalPrinter::initEJArchive()
 {
-    qDebug() << "initEJArchive";
+    logger->write("initEJArchive");
     PrinterCommand command(0xB2);
     command.write(sysPassword, 4);
     return send(command);
@@ -3776,7 +3772,7 @@ int ShtrihFiscalPrinter::initEJArchive()
 
 int ShtrihFiscalPrinter::readEJDocumentLine(ReadEJDocumentLine& data)
 {
-    qDebug() << "readEJData";
+    logger->write("readEJData");
     PrinterCommand command(0xB3);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -3799,7 +3795,7 @@ int ShtrihFiscalPrinter::readEJDocumentLine(ReadEJDocumentLine& data)
 
 int ShtrihFiscalPrinter::readEJJournal(ReadEJJournal& data)
 {
-    qDebug() << "readEJJournal";
+    logger->write("readEJJournal");
     PrinterCommand command(0xB4);
     command.write(sysPassword, 4);
     command.write(data.dayNumber, 2);
@@ -3828,7 +3824,7 @@ int ShtrihFiscalPrinter::readEJJournal(ReadEJJournal& data)
 
 int ShtrihFiscalPrinter::readEJDocument(ReadEJDocument& data)
 {
-    qDebug() << "readEJDocument";
+    logger->write("readEJDocument");
     PrinterCommand command(0xB5);
     command.write(sysPassword, 4);
     command.write(data.macNumber, 2);
@@ -3858,7 +3854,7 @@ int ShtrihFiscalPrinter::readEJDocument(ReadEJDocument& data)
 
 int ShtrihFiscalPrinter::readEJDepartmentReportByDates(ReadEJDepartmentReportByDates& data)
 {
-    qDebug() << "readEJDepartmentReportByDates";
+    logger->write("readEJDepartmentReportByDates");
     PrinterCommand command(0xB6);
     command.write(sysPassword, 4);
     command.write(data.reportType, 1);
@@ -3892,7 +3888,7 @@ int ShtrihFiscalPrinter::readEJDepartmentReportByDates(ReadEJDepartmentReportByD
 
 int ShtrihFiscalPrinter::readEJDepartmentReportByDays(ReadEJDepartmentReportByDays& data)
 {
-    qDebug() << "readEJDepartmentReportByDays";
+    logger->write("readEJDepartmentReportByDays");
     PrinterCommand command(0xB7);
     command.write(sysPassword, 4);
     command.write(data.reportType, 1);
@@ -3925,7 +3921,7 @@ int ShtrihFiscalPrinter::readEJDepartmentReportByDays(ReadEJDepartmentReportByDa
 
 int ShtrihFiscalPrinter::readEJReportByDates(ReadEJReportByDates& data)
 {
-    qDebug() << "readEJReportByDates";
+    logger->write("readEJReportByDates");
     PrinterCommand command(0xB8);
     command.write(sysPassword, 4);
     command.write(data.reportType, 1);
@@ -3957,7 +3953,7 @@ int ShtrihFiscalPrinter::readEJReportByDates(ReadEJReportByDates& data)
 
 int ShtrihFiscalPrinter::readEJReportByDays(ReadEJReportByDays& data)
 {
-    qDebug() << "readEJReportByDays";
+    logger->write("readEJReportByDays");
     PrinterCommand command(0xB9);
     command.write(sysPassword, 4);
     command.write(data.reportType, 1);
@@ -3988,7 +3984,7 @@ int ShtrihFiscalPrinter::readEJReportByDays(ReadEJReportByDays& data)
 
 int ShtrihFiscalPrinter::readEJDayTotals(ReadEJDayTotals& data)
 {
-    qDebug() << "readEJDayTotals";
+    logger->write("readEJDayTotals");
     PrinterCommand command(0xBA);
     command.write(sysPassword, 4);
     command.write(data.day, 2);
@@ -4010,7 +4006,7 @@ int ShtrihFiscalPrinter::readEJDayTotals(ReadEJDayTotals& data)
 
 int ShtrihFiscalPrinter::readEJActivation(ReadEJActivation& data)
 {
-    qDebug() << "readEJActivation";
+    logger->write("readEJActivation");
     PrinterCommand command(0xBB);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -4033,7 +4029,7 @@ int ShtrihFiscalPrinter::readEJActivation(ReadEJActivation& data)
 
 int ShtrihFiscalPrinter::setEJErrorCode(uint8_t code)
 {
-    qDebug() << "setEJErrorCode";
+    logger->write("setEJErrorCode");
     PrinterCommand command(0xBC);
     command.write(sysPassword, 4);
     command.write(code, 1);
@@ -4051,7 +4047,7 @@ int ShtrihFiscalPrinter::setEJErrorCode(uint8_t code)
 
 int ShtrihFiscalPrinter::continuePrint(PasswordCommand& data)
 {
-    qDebug() << "continuePrint";
+    logger->write("continuePrint");
     PrinterCommand command(0xB0);
     command.write(usrPassword, 4);
     data.resultCode = send(command);
@@ -4074,7 +4070,7 @@ int ShtrihFiscalPrinter::continuePrint(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::loadGraphics1(LoadGraphicsCommand& data)
 {
-    qDebug() << "loadGraphics1(" << data.line << ")";
+    logger->write(QString("loadGraphics1('%1')").arg(data.line));
 
     PrinterCommand command(0xC0);
     command.write(usrPassword, 4);
@@ -4100,7 +4096,7 @@ int ShtrihFiscalPrinter::loadGraphics1(LoadGraphicsCommand& data)
 
 int ShtrihFiscalPrinter::printGraphics1(PrintGraphicsCommand& data)
 {
-    qDebug() << "printGraphics1";
+    logger->write("printGraphics1");
 
     PrinterCommand command(0xC1);
     command.write(usrPassword, 4);
@@ -4125,7 +4121,7 @@ int ShtrihFiscalPrinter::printGraphics1(PrintGraphicsCommand& data)
 
 int ShtrihFiscalPrinter::printBarcode(PrintBarcodeCommand& data)
 {
-    qDebug() << "printBarcode";
+    logger->write("printBarcode");
 
     PrinterCommand command(0xC2);
     command.write(usrPassword, 4);
@@ -4150,7 +4146,7 @@ int ShtrihFiscalPrinter::printBarcode(PrintBarcodeCommand& data)
 
 int ShtrihFiscalPrinter::printGraphics2(PrintGraphicsCommand& data)
 {
-    qDebug() << "printGraphics2";
+    logger->write("printGraphics2");
 
     PrinterCommand command(0xC3);
     command.write(usrPassword, 4);
@@ -4176,7 +4172,7 @@ int ShtrihFiscalPrinter::printGraphics2(PrintGraphicsCommand& data)
 
 int ShtrihFiscalPrinter::loadGraphics2(LoadGraphicsCommand& data)
 {
-    qDebug() << "loadGraphics2";
+    logger->write("loadGraphics2");
 
     PrinterCommand command(0xC4);
     command.write(usrPassword, 4);
@@ -4202,7 +4198,7 @@ int ShtrihFiscalPrinter::loadGraphics2(LoadGraphicsCommand& data)
 
 int ShtrihFiscalPrinter::printGraphicsLine(GraphicsLineCommand& data)
 {
-    qDebug() << "printGraphicsLine";
+    logger->write("printGraphicsLine");
 
     PrinterCommand command(0xC5);
     command.write(usrPassword, 4);
@@ -4225,7 +4221,7 @@ int ShtrihFiscalPrinter::printGraphicsLine(GraphicsLineCommand& data)
 
 int ShtrihFiscalPrinter::openDay(PasswordCommand& data)
 {
-    qDebug() << "openDay";
+    logger->write("openDay");
 
     filter->openDay(EVENT_BEFORE, data);
 
@@ -4308,9 +4304,9 @@ int ShtrihFiscalPrinter::openDay(PasswordCommand& data)
     42 – Загрузка и печать графики-512 (команды 4DH, 4EH)
     43…63 – Зарезервированы
     Ширина печати шрифтом 1 (1 байт)
-    0 – запросить командой 26H "Прочитать параметры шрифта"; 1…255
+    0 – запросить командой 26H "Прочитать параметры шрифта"); 1…255
     Ширина печати шрифтом 2 (1 байт)
-    0 – запросить командой 26H "Прочитать параметры шрифта"; 1…255
+    0 – запросить командой 26H "Прочитать параметры шрифта"); 1…255
     Номер первой печатаемой линии в графике (1 байт)
     0, 1, 2
     Количество цифр в ИНН (1 байт) 12, 13, 14
@@ -4360,7 +4356,7 @@ int ShtrihFiscalPrinter::openDay(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::readModelParameters(ModelParameters& data)
 {
-    qDebug() << "readModelParameters";
+    logger->write("readModelParameters");
 
     PrinterCommand command(0xF7);
     command.write(1, 1);
@@ -4447,7 +4443,7 @@ int ShtrihFiscalPrinter::readModelParameters(ModelParameters& data)
 
 int ShtrihFiscalPrinter::readDeviceType(DeviceTypeCommand& data)
 {
-    qDebug() << "readDeviceType";
+    logger->write("readDeviceType");
 
     PrinterCommand command(0xFC);
     data.resultCode = send(command);
@@ -4465,7 +4461,7 @@ int ShtrihFiscalPrinter::readDeviceType(DeviceTypeCommand& data)
 
 int ShtrihFiscalPrinter::fsReadTotals(FSReadTotalsCommand& data)
 {
-    qDebug() << "fsReadTotals";
+    logger->write("fsReadTotals");
 
     PrinterCommand command(0xFE);
     command.write(0xF4, 1);
@@ -5070,7 +5066,7 @@ QString ShtrihFiscalPrinter::getSubmodeText(int value)
 
 int ShtrihFiscalPrinter::printBarcode(PrinterBarcode barcode)
 {
-    qDebug() << "printBarcode";
+    logger->write("printBarcode");
 
     using namespace Zint;
     Zint::QZint encoder;
@@ -5081,7 +5077,7 @@ int ShtrihFiscalPrinter::printBarcode(PrinterBarcode barcode)
     encoder.encode();
 
     zint_symbol* zsymbol = encoder.getZintSymbol();
-    qDebug() << "zsymbol->rows: " << zsymbol->rows;
+    logger->write("zsymbol->rows: " + zsymbol->rows);
 
     QPixmap pixmap(QSize(zsymbol->rows, zsymbol->rows));
     QPainter painter(&pixmap);
@@ -5089,8 +5085,10 @@ int ShtrihFiscalPrinter::printBarcode(PrinterBarcode barcode)
     encoder.render(painter, paintRect);
 
     QImage image = pixmap.toImage();
-    qDebug() << "image.width: " << image.width()
-             << "image.height: " << image.height();
+
+    QString text;
+    logger->write(text.sprintf("image.width: %d, image.height: %d",
+        image.width(), image.height()));
 
     return printImage1(image);
 }
@@ -5146,7 +5144,7 @@ int ShtrihFiscalPrinter::printGraphics(PrintGraphicsCommand& data)
 
 int ShtrihFiscalPrinter::loadImage(QImage& image)
 {
-    qDebug() << "loadImage";
+    logger->write("loadImage");
 
     if (capLoadGraphics3) {
         return loadImage3(image);
@@ -5169,7 +5167,7 @@ QImage ShtrihFiscalPrinter::alignImage(QImage image, int width)
 {
     switch (imageAlignment) {
     case PrinterAlignment::Right: {
-        qDebug() << "PrinterAlignment::Right";
+        logger->write("PrinterAlignment::Right");
 
         int xoffset = width - image.width();
         QImage img(width, image.height(), QImage::Format_MonoLSB);
@@ -5179,7 +5177,7 @@ QImage ShtrihFiscalPrinter::alignImage(QImage image, int width)
         return img;
     }
     case PrinterAlignment::Center: {
-        qDebug() << "PrinterAlignment::Center";
+        logger->write("PrinterAlignment::Center");
 
         int xoffset = (width - image.width()) / 2;
         QImage img(image.width() + xoffset, image.height(), QImage::Format_MonoLSB);
@@ -5196,7 +5194,7 @@ QImage ShtrihFiscalPrinter::alignImage(QImage image, int width)
 
 int ShtrihFiscalPrinter::loadImage1(QImage& image)
 {
-    qDebug() << "loadImage1";
+    logger->write("loadImage1");
 
     image = image.convertToFormat(QImage::Format_MonoLSB, Qt::MonoOnly);
     //image = alignImage(image, 320);
@@ -5229,7 +5227,7 @@ int ShtrihFiscalPrinter::loadImage1(QImage& image)
 
 int ShtrihFiscalPrinter::loadImage2(QImage& image)
 {
-    qDebug() << "loadImage2";
+    logger->write("loadImage2");
 
     image = image.convertToFormat(QImage::Format_MonoLSB, Qt::MonoOnly);
     image = alignImage(image, 320);
@@ -5262,11 +5260,11 @@ int ShtrihFiscalPrinter::loadImage2(QImage& image)
 
 int ShtrihFiscalPrinter::loadImage3(QImage& image)
 {
-    qDebug() << "loadImage3";
+    logger->write("loadImage3");
 
     image = image.convertToFormat(QImage::Format_MonoLSB, Qt::MonoOnly);
     // image = alignImage(img, 512);
-    // qDebug() << "alignImage: " << image.width() << ", " << image.height();
+    // logger->write("alignImage: " << image.width() << ", " << image.height();
 
     int rc = 0;
     if (image.bytesPerLine() > 512) {
@@ -5327,7 +5325,7 @@ int ShtrihFiscalPrinter::getImageCount()
 
 int ShtrihFiscalPrinter::printImage(QImage image)
 {
-    qDebug() << "printImage";
+    logger->write("printImage");
 
     if ((capLoadGraphics3) && (capPrintGraphics3)) {
         return printImage3(image);
@@ -5343,7 +5341,7 @@ int ShtrihFiscalPrinter::printImage(QImage image)
 
 int ShtrihFiscalPrinter::printImage1(QImage& image)
 {
-    qDebug() << "printImage1";
+    logger->write("printImage1");
 
     int rc = loadImage1(image);
     if (failed(rc))
@@ -5359,7 +5357,7 @@ int ShtrihFiscalPrinter::printImage1(QImage& image)
 
 int ShtrihFiscalPrinter::printImage2(QImage& image)
 {
-    qDebug() << "printImage2";
+    logger->write("printImage2");
     int rc = loadImage2(image);
     if (failed(rc))
         return rc;
@@ -5374,7 +5372,7 @@ int ShtrihFiscalPrinter::printImage2(QImage& image)
 
 int ShtrihFiscalPrinter::printImage3(QImage& image)
 {
-    qDebug() << "printImage3";
+    logger->write("printImage3");
 
     int rc = loadImage3(image);
     if (failed(rc))
@@ -5521,7 +5519,7 @@ PrinterField ShtrihFiscalPrinter::getPrinterField(int table, int row, int field)
     fieldInfo.table = table;
     fieldInfo.type = command.type;
 
-    qDebug() << "fieldInfo.size" << fieldInfo.size;
+    logger->write("fieldInfo.size" + fieldInfo.size);
 
     printerField.setInfo(fieldInfo);
     fields.add(printerField);
@@ -5530,7 +5528,8 @@ PrinterField ShtrihFiscalPrinter::getPrinterField(int table, int row, int field)
 
 QString ShtrihFiscalPrinter::readTableStr(int table, int row, int field)
 {
-    qDebug() << "readTable(" << table << ", " << row << ", " << field << ")";
+    QString text;
+    logger->write(text.sprintf("readTable(%d, %d, %d)", table, row, field));
 
     PrinterField printerField;
     printerField = getPrinterField(table, row, field);
@@ -5542,13 +5541,14 @@ QString ShtrihFiscalPrinter::readTableStr(int table, int row, int field)
     check(readTable(command));
     printerField.setBinary(command.value);
     QString result = printerField.getValue();
-    qDebug() << "readTable:" << result;
+    logger->write("readTable:" + result);
     return result;
 }
 
 int ShtrihFiscalPrinter::readTable(int table, int row, int field, QString text)
 {
-    qDebug() << "readTable(" << table << ", " << row << ", " << field << ")";
+    QString atext;
+    logger->write(atext.sprintf("readTable(%d, %d, %d)", table, row, field));
 
     PrinterField printerField;
     printerField = getPrinterField(table, row, field);
@@ -5562,7 +5562,7 @@ int ShtrihFiscalPrinter::readTable(int table, int row, int field, QString text)
     {
         printerField.setBinary(command.value);
         text = printerField.getValue();
-        qDebug() << "readTable:" << text;
+        logger->write("readTable:" + text);
     }
     return rc;
 }
@@ -5655,7 +5655,7 @@ QString ShtrihFiscalPrinter::PrinterTimeToStr(PrinterTime time)
 
 int ShtrihFiscalPrinter::fsReadStatus(FSStatus& status)
 {
-    qDebug() << "fsReadStatus";
+    logger->write("fsReadStatus");
     PrinterCommand command(0xFF01);
     command.write(sysPassword, 4);
     int rc = send(command);
@@ -5696,7 +5696,7 @@ int ShtrihFiscalPrinter::fsReadStatus(FSStatus& status)
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsReadSerial(QString& serial){
-    qDebug() << "fsReadSerial";
+    logger->write("fsReadSerial");
     PrinterCommand command(0xFF02);
     command.write(sysPassword, 4);
     int rc = send(command);
@@ -5716,7 +5716,7 @@ int ShtrihFiscalPrinter::fsReadSerial(QString& serial){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsReadExpDate(PrinterDate& date){
-    qDebug() << "fsReadExpDate";
+    logger->write("fsReadExpDate");
     PrinterCommand command(0xFF03);
     command.write(sysPassword, 4);
     int rc = send(command);
@@ -5739,7 +5739,7 @@ int ShtrihFiscalPrinter::fsReadExpDate(PrinterDate& date){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsReadVersion(FSVersion& version){
-    qDebug() << "fsReadVersion";
+    logger->write("fsReadVersion");
     PrinterCommand command(0xFF04);
     command.write(sysPassword, 4);
     int rc = send(command);
@@ -5763,7 +5763,7 @@ int ShtrihFiscalPrinter::fsReadVersion(FSVersion& version){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsStartFiscalization(int reportType){
-    qDebug() << "fsStartFiscalization";
+    logger->write("fsStartFiscalization");
     PrinterCommand command(0xFF05);
     command.write(sysPassword, 4);
     command.write(reportType, 1);
@@ -5789,7 +5789,7 @@ int ShtrihFiscalPrinter::fsStartFiscalization(int reportType){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsPrintFiscalization(FSPrintFiscalization& data){
-    qDebug() << "fsPrintFiscalization";
+    logger->write("fsPrintFiscalization");
     PrinterCommand command(0xFF06);
     command.write(sysPassword, 4);
     command.writeStr(data.INN, 12);
@@ -5818,7 +5818,7 @@ int ShtrihFiscalPrinter::fsPrintFiscalization(FSPrintFiscalization& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsReset(int code){
-    qDebug() << "fsReset";
+    logger->write("fsReset");
     PrinterCommand command(0xFF07);
     command.write(sysPassword, 4);
     command.write8(code);
@@ -5834,7 +5834,7 @@ int ShtrihFiscalPrinter::fsReset(int code){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsCancelDocument(){
-    qDebug() << "fsCancelDocument";
+    logger->write("fsCancelDocument");
     PrinterCommand command(0xFF08);
     command.write(sysPassword, 4);
     return send(command);
@@ -5860,7 +5860,7 @@ int ShtrihFiscalPrinter::fsCancelDocument(){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsReadFiscalization(FSReadFiscalization& data){
-    qDebug() << "fsReadFiscalization";
+    logger->write("fsReadFiscalization");
     PrinterCommand command(0xFF09);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -5895,7 +5895,7 @@ int ShtrihFiscalPrinter::fsReadFiscalization(FSReadFiscalization& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsFindDocument(FSFindDocument& data){
-    qDebug() << "fsFindDocument";
+    logger->write("fsFindDocument");
     PrinterCommand command(0xFF0A);
     command.write(sysPassword, 4);
     command.write32(data.docNum);
@@ -5958,7 +5958,7 @@ int ShtrihFiscalPrinter::fsFindDocument(FSFindDocument& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsOpenDay(FSOpenDay& data){
-    qDebug() << "fsOpenDay";
+    logger->write("fsOpenDay");
     PrinterCommand command(0xFF0B);
     command.write(sysPassword, 4);
     data.resultCode = send(command);
@@ -5981,7 +5981,7 @@ int ShtrihFiscalPrinter::fsOpenDay(FSOpenDay& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsWriteTLV(QByteArray& data){
-    qDebug() << "fsWriteTLV";
+    logger->write("fsWriteTLV");
     PrinterCommand command(0xFF0C);
     command.write(sysPassword, 4);
     command.write(data);
@@ -6019,7 +6019,7 @@ int ShtrihFiscalPrinter::fsWriteTLV(QByteArray& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsPrintItem(FSReceiptItem& data){
-    qDebug() << "fsPrintItem";
+    logger->write("fsPrintItem");
     PrinterCommand command(0xFF0D);
     command.write(sysPassword, 4);
     command.write8(data.operation);
@@ -6043,7 +6043,7 @@ int ShtrihFiscalPrinter::fsPrintItem(FSReceiptItem& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsInitEEPROM(){
-    qDebug() << "fsInitEEPROM";
+    logger->write("fsInitEEPROM");
     PrinterCommand command(0xFF16);
     return send(command);
 }
@@ -6068,7 +6068,7 @@ int ShtrihFiscalPrinter::fsInitEEPROM(){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsReadRegisters(FSReadRegisters& data){
-    qDebug() << "fsReadRegisters";
+    logger->write("fsReadRegisters");
     PrinterCommand command(0xFF1A);
     command.write(sysPassword, 4);
     command.write(data.itemCode, 2);
@@ -6096,7 +6096,7 @@ int ShtrihFiscalPrinter::fsReadRegisters(FSReadRegisters& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsReadBufferStatus(FSBufferStatus& data){
-    qDebug() << "fsReadBufferStatus";
+    logger->write("fsReadBufferStatus");
     PrinterCommand command(0xFF30);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -6122,7 +6122,7 @@ int ShtrihFiscalPrinter::fsReadBufferStatus(FSBufferStatus& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsReadBufferBlock(FSBufferBlock& data){
-    qDebug() << "fsReadBufferBlock";
+    logger->write("fsReadBufferBlock");
     PrinterCommand command(0xFF31);
     command.write(sysPassword, 4);
     command.write16(data.offset);
@@ -6148,7 +6148,7 @@ int ShtrihFiscalPrinter::fsReadBufferBlock(FSBufferBlock& data){
 ***************************************************************************/
 
 int ShtrihFiscalPrinter::fsStartWriteBuffer(FSStartWriteBuffer& data){
-    qDebug() << "fsStartWriteBuffer";
+    logger->write("fsStartWriteBuffer");
     PrinterCommand command(0xFF32);
     command.write(sysPassword, 4);
     command.write16(data.size);
@@ -6173,7 +6173,7 @@ int ShtrihFiscalPrinter::fsStartWriteBuffer(FSStartWriteBuffer& data){
 
 int ShtrihFiscalPrinter::fsWriteBuffer(FSWriteBuffer& data)
 {
-    qDebug() << "fsWriteBuffer";
+    logger->write("fsWriteBuffer");
     PrinterCommand command(0xFF33);
     command.write(sysPassword, 4);
     command.write16(data.offset);
@@ -6198,7 +6198,7 @@ int ShtrihFiscalPrinter::fsWriteBuffer(FSWriteBuffer& data)
 
 int ShtrihFiscalPrinter::fsPrintRefiscalization(FSRefiscalization& data)
 {
-    qDebug() << "fsPrintRefiscalization";
+    logger->write("fsPrintRefiscalization");
     PrinterCommand command(0xFF34);
     command.write(sysPassword, 4);
     command.write8(data.code);
@@ -6220,7 +6220,7 @@ int ShtrihFiscalPrinter::fsPrintRefiscalization(FSRefiscalization& data)
 
 int ShtrihFiscalPrinter::fsStartCorrectionReceipt()
 {
-    qDebug() << "fsStartCorrectionReceipt";
+    logger->write("fsStartCorrectionReceipt");
     PrinterCommand command(0xFF35);
     command.write(sysPassword, 4);
     return send(command);
@@ -6243,7 +6243,7 @@ int ShtrihFiscalPrinter::fsStartCorrectionReceipt()
 
 int ShtrihFiscalPrinter::fsPrintCorrection(FSPrintCorrection& data)
 {
-    qDebug() << "fsPrintCorrection";
+    logger->write("fsPrintCorrection");
     PrinterCommand command(0xFF36);
     command.write(sysPassword, 4);
     command.write(data.total, 5);
@@ -6268,7 +6268,7 @@ int ShtrihFiscalPrinter::fsPrintCorrection(FSPrintCorrection& data)
 
 int ShtrihFiscalPrinter::fsStartCommReport()
 {
-    qDebug() << "fsStartCommReport";
+    logger->write("fsStartCommReport");
     PrinterCommand command(0xFF37);
     command.write(sysPassword, 4);
     return send(command);
@@ -6290,7 +6290,7 @@ int ShtrihFiscalPrinter::fsStartCommReport()
 
 int ShtrihFiscalPrinter::fsPrintCommReport(FSCommReport& data)
 {
-    qDebug() << "fsPrintCommReport";
+    logger->write("fsPrintCommReport");
     PrinterCommand command(0xFF38);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -6327,7 +6327,7 @@ int ShtrihFiscalPrinter::fsPrintCommReport(FSCommReport& data)
 
 int ShtrihFiscalPrinter::fsReadCommStatus(FSCommStatus& data)
 {
-    qDebug() << "fsReadCommStatus";
+    logger->write("fsReadCommStatus");
     PrinterCommand command(0xFF39);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -6358,7 +6358,7 @@ int ShtrihFiscalPrinter::fsReadCommStatus(FSCommStatus& data)
 
 int ShtrihFiscalPrinter::fsReadDocument(FSDocumentInfo& data)
 {
-    qDebug() << "fsReadDocument";
+    logger->write("fsReadDocument");
     PrinterCommand command(0xFF3A);
     command.write(sysPassword, 4);
     command.write(data.docNum, 4);
@@ -6382,7 +6382,7 @@ int ShtrihFiscalPrinter::fsReadDocument(FSDocumentInfo& data)
 
 int ShtrihFiscalPrinter::fsReadDocumentTLV(QByteArray& data)
 {
-    qDebug() << "fsReadDocumentTLV";
+    logger->write("fsReadDocumentTLV");
     PrinterCommand command(0xFF3B);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -6408,7 +6408,7 @@ int ShtrihFiscalPrinter::fsReadDocumentTLV(QByteArray& data)
 
 int ShtrihFiscalPrinter::fsReadTicket(FSTicket& data)
 {
-    qDebug() << "fsReadTicket";
+    logger->write("fsReadTicket");
     PrinterCommand command(0xFF3C);
     command.write(sysPassword, 4);
     command.write(data.docNum, 4);
@@ -6429,7 +6429,7 @@ int ShtrihFiscalPrinter::fsReadTicket(FSTicket& data)
 
 int ShtrihFiscalPrinter::fsStartClose()
 {
-    qDebug() << "fsStartClose";
+    logger->write("fsStartClose");
     PrinterCommand command(0xFF3D);
     command.write(sysPassword, 4);
     return send(command);
@@ -6447,7 +6447,7 @@ int ShtrihFiscalPrinter::fsStartClose()
 
 int ShtrihFiscalPrinter::fsClose(FSDocument& data)
 {
-    qDebug() << "fsClose";
+    logger->write("fsClose");
     PrinterCommand command(0xFF3E);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -6469,7 +6469,7 @@ int ShtrihFiscalPrinter::fsClose(FSDocument& data)
 
 int ShtrihFiscalPrinter::fsReadQueueSize(uint16_t& data)
 {
-    qDebug() << "fsReadQueueSize";
+    logger->write("fsReadQueueSize");
     PrinterCommand command(0xFF3F);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -6494,7 +6494,7 @@ int ShtrihFiscalPrinter::fsReadQueueSize(uint16_t& data)
 
 int ShtrihFiscalPrinter::fsReadDayStatus(FSDayStatus& data)
 {
-    qDebug() << "fsReadDayStatus";
+    logger->write("fsReadDayStatus");
     PrinterCommand command(0xFF40);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -6516,7 +6516,7 @@ int ShtrihFiscalPrinter::fsReadDayStatus(FSDayStatus& data)
 
 int ShtrihFiscalPrinter::fsStartOpenDay()
 {
-    qDebug() << "fsStartOpenDay";
+    logger->write("fsStartOpenDay");
     PrinterCommand command(0xFF41);
     command.write(sysPassword, 4);
     return send(command);
@@ -6535,7 +6535,7 @@ int ShtrihFiscalPrinter::fsStartOpenDay()
 
 int ShtrihFiscalPrinter::fsStartCloseDay()
 {
-    qDebug() << "fsStartCloseDay";
+    logger->write("fsStartCloseDay");
     PrinterCommand command(0xFF42);
     command.write(sysPassword, 4);
     return send(command);
@@ -6555,7 +6555,7 @@ int ShtrihFiscalPrinter::fsStartCloseDay()
 
 int ShtrihFiscalPrinter::fsCloseDay(FSCloseDay& data)
 {
-    qDebug() << "fsCloseDay";
+    logger->write("fsCloseDay");
     PrinterCommand command(0xFF43);
     command.write(sysPassword, 4);
     int resultCode = send(command);
@@ -6605,7 +6605,7 @@ int ShtrihFiscalPrinter::fsCloseDay(FSCloseDay& data)
 
 int ShtrihFiscalPrinter::fsPrintSale(FSSale& data)
 {
-    qDebug() << "fsPrintSale";
+    logger->write("fsPrintSale");
     PrinterCommand command(0xFF44);
     command.write(sysPassword, 4);
     command.write8(data.operation);
@@ -6660,7 +6660,7 @@ int ShtrihFiscalPrinter::fsPrintSale(FSSale& data)
 
 int ShtrihFiscalPrinter::fsCloseReceipt(FSCloseReceipt& data)
 {
-    qDebug() << "fsCloseReceipt";
+    logger->write("fsCloseReceipt");
     PrinterCommand command(0xFF45);
     command.write(sysPassword, 4);
     for (int i=0;i<16;i++){
@@ -6709,7 +6709,7 @@ int ShtrihFiscalPrinter::fsCloseReceipt(FSCloseReceipt& data)
 
 int ShtrihFiscalPrinter::fsPrintSale2(FSSale2& data)
 {
-    qDebug() << "fsPrintSale2";
+    logger->write("fsPrintSale2");
     PrinterCommand command(0xFF46);
     command.write(sysPassword, 4);
     command.write8(data.operation);
@@ -6756,7 +6756,7 @@ int ShtrihFiscalPrinter::fsPrintSale2(FSSale2& data)
 
 int ShtrihFiscalPrinter::fsPrintCorrection2(FSPrintCorrection2& data)
 {
-    qDebug() << "fsPrintCorrection2";
+    logger->write("fsPrintCorrection2");
     PrinterCommand command(0xFF4A);
     command.write(sysPassword, 4);
     command.write(data.correctionType, 1);
@@ -6793,7 +6793,7 @@ int ShtrihFiscalPrinter::fsPrintCorrection2(FSPrintCorrection2& data)
 
 int ShtrihFiscalPrinter::fsDiscountCharge(FSDiscountCharge& data)
 {
-    qDebug() << "fsDiscountCharge";
+    logger->write("fsDiscountCharge");
     PrinterCommand command(0xFF4B);
     command.write(sysPassword, 4);
     command.write(data.discount, 5);
@@ -6805,7 +6805,7 @@ int ShtrihFiscalPrinter::fsDiscountCharge(FSDiscountCharge& data)
 
 
 int ShtrihFiscalPrinter::fsWriteTag(uint16_t tagId, QString tagValue){
-    qDebug() << "fsWriteTag";
+    logger->write("fsWriteTag");
 
     TLVList list;
     list.add(tagId, tagValue);
@@ -6851,7 +6851,7 @@ void ShtrihFiscalPrinter::setServerParams(ServerParams value){
 
 int ShtrihFiscalPrinter::fsReadDocCount(int& docCount)
 {
-    //qDebug() << "fsReadDocCount";
+    //logger->write("fsReadDocCount");
 
     PrinterCommand command(0xFF3F);
     command.write(sysPassword, 4);
@@ -6863,7 +6863,7 @@ int ShtrihFiscalPrinter::fsReadDocCount(int& docCount)
 }
 
 int ShtrihFiscalPrinter::readTotals(PrinterTotals& data){
-    qDebug() << "readTotals";
+    logger->write("readTotals");
 
     int rc = 0;
     if (capFiscalStorage)
@@ -6902,7 +6902,7 @@ int ShtrihFiscalPrinter::readTotals(PrinterTotals& data){
 
 void ShtrihFiscalPrinter::printLines(QStringList lines)
 {
-    qDebug() << "printLines";
+    logger->write("printLines");
     bool journalEnabled = getJournalEnabled();
     setJournalEnabled(false);
     try{
@@ -7085,7 +7085,7 @@ FSDocument21 ShtrihFiscalPrinter::decodeDocument21(QByteArray data)
 
 uint32_t ShtrihFiscalPrinter::getDocumentMac(FSFindDocument doc)
 {
-    qDebug() << "getDocumentMac";
+    logger->write("getDocumentMac");
     switch (doc.docType)
     {
         case 1: return doc.document1.docMac;

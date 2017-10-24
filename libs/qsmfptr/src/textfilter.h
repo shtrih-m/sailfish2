@@ -4,7 +4,7 @@
 #include <QFile>
 #include <QVector>
 #include <QStringList>
-#include "src/ShtrihFiscalPrinter.h"
+#include "src/shtrihfiscalprinter.h"
 #include "utils.h"
 
 

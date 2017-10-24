@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "PrinterTypes.h"
+#include "printertypes.h"
 #include <QTextCodec>
 
 class PrinterCommand {

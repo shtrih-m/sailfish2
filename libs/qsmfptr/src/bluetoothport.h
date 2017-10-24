@@ -4,11 +4,12 @@
 #include "fiscalprinter.h"
 #include <QBluetoothServiceInfo>
 #include <QBluetoothSocket>
+#include "logger.h"
 
 class BluetoothPort : public QObject, public PrinterPort {
     Q_OBJECT
 public:
-    explicit BluetoothPort(QObject* parent = 0);
+    explicit BluetoothPort(QObject* parent, Logger* logger);
 
     bool connectToDevice();
     void disconnect();
@@ -22,6 +23,7 @@ public:
     void setAddress(QString value);
 
 private:
+    Logger* logger;
     bool connected;
     QString address;
     int readTimeout;

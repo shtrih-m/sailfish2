@@ -3,7 +3,7 @@
 
 #include <QByteArray>
 #include <QTcpSocket>
-
+#include "logger.h"
 
 struct ServerParams{
     QString address;
@@ -18,6 +18,7 @@ class ServerConnection
 {
 private:
     int sk;
+    Logger* logger;
     bool connected;
     QString errorText;
     ServerParams params;
@@ -25,7 +26,7 @@ private:
     void waitRead();
     QString getErrorText(int code);
 public:
-    ServerConnection();
+    ServerConnection(Logger* logger);
 
     bool connect();
     void disconnect();

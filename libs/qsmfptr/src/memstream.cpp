@@ -11,7 +11,7 @@
  * Created on June 29, 2016, 6:47 PM
  */
 
-#include "MemStream.h"
+#include "memstream.h"
 #include <QByteArray>
 #include <QDebug>
 
