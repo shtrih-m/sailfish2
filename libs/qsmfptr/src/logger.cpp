@@ -35,7 +35,7 @@ void Logger::closeFile()
 
 void Logger::write(const QString &value)
 {
-    qDebug() << value;
+    //qDebug() << value;
 
     openFile();
     QString text = value;// + "";

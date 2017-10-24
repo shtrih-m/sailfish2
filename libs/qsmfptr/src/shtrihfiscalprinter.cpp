@@ -169,7 +169,7 @@ bool ShtrihFiscalPrinter::getJournalEnabled(){
 
 void ShtrihFiscalPrinter::setJournalEnabled(bool value)
 {
-    logger->write("setJournalEnabled: " + value);
+    logger->write(QString("setJournalEnabled: %1").arg(value));
 
     journalEnabled = value;
     if (value)
@@ -237,7 +237,7 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
     int rc = 0;
     for (uint32_t i = 0; i < maxRetryCount; i++) {
         if (i != 0) {
-            logger->write("retry " + i);
+            logger->write(QString("retry %1").arg(i));
         }
 
         logger->writeTx(command.encode());
@@ -255,7 +255,7 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
         logger->writeRx(command.getRxData());
         if (rc == 0) break;
 
-        logger->write("ERROR:  " + getErrorText2(rc));
+        logger->write(QString("ERROR: %1").arg(getErrorText2(rc)));
 
         switch (rc) {
         case 0x50: {
@@ -368,12 +368,12 @@ void ShtrihFiscalPrinter::connectDevice()
     {
         startFDOThread();
     }
-    logger->write("capLoadGraphics1: " + capLoadGraphics1);
-    logger->write("capLoadGraphics2: " + capLoadGraphics2);
-    logger->write("capLoadGraphics3: " + capLoadGraphics3);
-    logger->write("capPrintGraphics1: " + capPrintGraphics1);
-    logger->write("capPrintGraphics2: " + capPrintGraphics2);
-    logger->write("capPrintGraphics3: " + capPrintGraphics3);
+    logger->write(QString("capLoadGraphics1: %1").arg(capLoadGraphics1));
+    logger->write(QString("capLoadGraphics2: %1").arg(capLoadGraphics2));
+    logger->write(QString("capLoadGraphics3: %1").arg(capLoadGraphics3));
+    logger->write(QString("capPrintGraphics1: %1").arg(capPrintGraphics1));
+    logger->write(QString("capPrintGraphics2: %1").arg(capPrintGraphics2));
+    logger->write(QString("capPrintGraphics3: %1").arg(capPrintGraphics3));
 }
 
 bool ShtrihFiscalPrinter::isShtrihMobile(){
@@ -398,11 +398,11 @@ void ShtrihFiscalPrinter::startFDOThread()
     serverParams.writeTimeout = 20000;
     serverParams.connectRetries = 1;
 
-    logger->write("params.address: " + serverParams.address);
-    logger->write("params.port: " + serverParams.port);
-    logger->write("params.readTimeout: " + serverParams.readTimeout);
-    logger->write("params.writeTimeout: " + serverParams.writeTimeout);
-    logger->write("params.connectTimeout: " + serverParams.connectTimeout);
+    logger->write(QString("params.address: %1").arg(serverParams.address));
+    logger->write(QString("params.port: %1").arg(serverParams.port));
+    logger->write(QString("params.readTimeout: %1").arg(serverParams.readTimeout));
+    logger->write(QString("params.writeTimeout: %1").arg(serverParams.writeTimeout));
+    logger->write(QString("params.connectTimeout: %1").arg(serverParams.connectTimeout));
 
 
     stopFlag = false;
@@ -448,7 +448,7 @@ void ShtrihFiscalPrinter::sendBlocks()
     int docCount = 0;
     while ((fsReadDocCount(docCount) == 0)&&(docCount > 0))
     {
-        logger->write("docCount: " + docCount);
+        logger->write(QString("docCount: %1").arg(docCount));
         if (readBlock(block))
         {
             if (sendBlock(block, answer))
@@ -489,7 +489,7 @@ bool ShtrihFiscalPrinter::sendBlock(QByteArray block, QByteArray& result)
 
 int ShtrihFiscalPrinter::writeBlock(QByteArray block)
 {
-    logger->write("writeBlock, size: " + block.size());
+    logger->write(QString("writeBlock, size: %1").arg(block.size()));
 
     int rc = 0;
 
@@ -542,7 +542,7 @@ bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
     try{
         FSBufferStatus bufferStatus;
         check(fsReadBufferStatus(bufferStatus));
-        logger->write("bufferStatus.dataSize: "+ bufferStatus.dataSize);
+        logger->write(QString("bufferStatus.dataSize: %1").arg(bufferStatus.dataSize));
 
         if (bufferStatus.dataSize <= 0) {
             unlock();
@@ -1765,7 +1765,7 @@ int ShtrihFiscalPrinter::printItemsReport(PasswordCommand& data)
 
 int ShtrihFiscalPrinter::printGraphics3(PrintGraphics3Command& data)
 {
-    logger->write("printGraphics3" + data.startLine);
+    logger->write(QString("printGraphics3: %1").arg(data.startLine));
 
     PrinterCommand command(0x4D);
     command.write(usrPassword, 4);
@@ -1797,7 +1797,7 @@ int ShtrihFiscalPrinter::printGraphics3(PrintGraphics3Command& data)
 
 int ShtrihFiscalPrinter::loadGraphics3(LoadGraphics3Command& data)
 {
-    logger->write("loadGraphics3" + data.startLine);
+    logger->write(QString("loadGraphics3: %1").arg(data.startLine));
 
     PrinterCommand command(0x4E);
     command.write(usrPassword, 4);
@@ -2795,7 +2795,7 @@ int ShtrihFiscalPrinter::slipPrintItem(SlipPrintItemCommand& data)
 
 int ShtrihFiscalPrinter::printLine(QString text)
 {
-    logger->write("printLine " + text);
+    logger->write(QString("printLine: %1").arg(text));
     PrintStringCommand command;
     command.flags = SMFP_STATION_REC;
     command.text = text;
@@ -2823,7 +2823,7 @@ int ShtrihFiscalPrinter::getLineLength(int font)
         }
         len = lineLength[font - 1];
     }
-    logger->write("getLineLength: " + len);
+    logger->write(QString("getLineLength: %1").arg(len));
     return len;
 }
 
@@ -5077,7 +5077,7 @@ int ShtrihFiscalPrinter::printBarcode(PrinterBarcode barcode)
     encoder.encode();
 
     zint_symbol* zsymbol = encoder.getZintSymbol();
-    logger->write("zsymbol->rows: " + zsymbol->rows);
+    logger->write(QString("zsymbol->rows: %1").arg(zsymbol->rows));
 
     QPixmap pixmap(QSize(zsymbol->rows, zsymbol->rows));
     QPainter painter(&pixmap);
@@ -5086,9 +5086,8 @@ int ShtrihFiscalPrinter::printBarcode(PrinterBarcode barcode)
 
     QImage image = pixmap.toImage();
 
-    QString text;
-    logger->write(text.sprintf("image.width: %d, image.height: %d",
-        image.width(), image.height()));
+    logger->write(QString("image.width: %1, image.height: %2").arg(
+        image.width()).arg(image.height()));
 
     return printImage1(image);
 }
@@ -5496,18 +5495,21 @@ uint16_t ShtrihFiscalPrinter::readDayNumber()
     return command.dayNumber;
 }
 
-PrinterField ShtrihFiscalPrinter::getPrinterField(int table, int row, int field)
+int ShtrihFiscalPrinter::getPrinterField(int table, int row, int field, PrinterField& printerField )
 {
-    PrinterField printerField;
+    int rc = 0;
     if (fields.find(table, field, printerField))
     {
-        return printerField;
+        return rc;
     }
 
     FieldInfoCommand command;
     command.table = table;
     command.field = field;
-    check(readFieldInfo(command));
+    rc = readFieldInfo(command);
+    if (!succeeded(rc)){
+        return rc;
+    }
 
     PrinterFieldInfo fieldInfo;
     fieldInfo.field = field;
@@ -5519,20 +5521,19 @@ PrinterField ShtrihFiscalPrinter::getPrinterField(int table, int row, int field)
     fieldInfo.table = table;
     fieldInfo.type = command.type;
 
-    logger->write("fieldInfo.size" + fieldInfo.size);
+    logger->write(QString("fieldInfo.size: %1").arg(fieldInfo.size));
 
     printerField.setInfo(fieldInfo);
     fields.add(printerField);
-    return printerField;
+    return rc;
 }
 
 QString ShtrihFiscalPrinter::readTableStr(int table, int row, int field)
 {
-    QString text;
-    logger->write(text.sprintf("readTable(%d, %d, %d)", table, row, field));
+    logger->write(QString("readTable(%1, %2, %3)").arg(table).arg(row).arg(field));
 
     PrinterField printerField;
-    printerField = getPrinterField(table, row, field);
+    check(getPrinterField(table, row, field, printerField));
 
     TableValueCommand command;
     command.table = table;
@@ -5541,28 +5542,30 @@ QString ShtrihFiscalPrinter::readTableStr(int table, int row, int field)
     check(readTable(command));
     printerField.setBinary(command.value);
     QString result = printerField.getValue();
-    logger->write("readTable:" + result);
+    logger->write(QString("readTable: %1").arg(result));
     return result;
 }
 
 int ShtrihFiscalPrinter::readTable(int table, int row, int field, QString text)
 {
-    QString atext;
-    logger->write(atext.sprintf("readTable(%d, %d, %d)", table, row, field));
+    logger->write(QString("readTable(%1, %2, %3)").arg(table).arg(row).arg(field));
 
     PrinterField printerField;
-    printerField = getPrinterField(table, row, field);
+    int rc = getPrinterField(table, row, field, printerField);
+    if (!succeeded(rc)){
+        return rc;
+    }
 
     TableValueCommand command;
     command.table = table;
     command.row = row;
     command.field = field;
-    int rc = readTable(command);
+    rc = readTable(command);
     if (succeeded(rc))
     {
         printerField.setBinary(command.value);
         text = printerField.getValue();
-        logger->write("readTable:" + text);
+        logger->write(QString("readTable: %1").arg(text));
     }
     return rc;
 }

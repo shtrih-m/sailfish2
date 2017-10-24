@@ -46,12 +46,10 @@ void PrinterTest::execute()
         //journal.show(journal.readDocRange(21, 22));
         //journal.deleteFile();
 
-        deleteLogFile();
         connectPrinter();
+        printZReport();
+        printSaleReceipt();
         disconnectPrinter();
-
-        logger->closeFile();
-        showLogFile();
 
         //journal.show(journal.readDay(17));
         //journal.show(journal.readDay(5));

@@ -47,12 +47,12 @@ void BluetoothPort::socketDisconnected()
 
 void BluetoothPort::socketError(QBluetoothSocket::SocketError error)
 {
-    logger->write("error: " + error);
+    logger->write(QString("error: %1").arg(error));
 }
 
 void BluetoothPort::socketStateChanged(QBluetoothSocket::SocketState state)
 {
-    logger->write("stateChanged: " + state);
+    logger->write(QString("stateChanged: %1").arg(state));
 }
 
 bool BluetoothPort::connectToDevice()

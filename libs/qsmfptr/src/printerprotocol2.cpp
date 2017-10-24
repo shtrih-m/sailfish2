@@ -133,7 +133,7 @@ void PrinterProtocol2::synchronizeFrames(int timeout)
             break;
         } catch (PortException e)
         {
-            logger->write("ERROR: " + e.getText());
+            logger->write(QString("ERROR: %1").arg(e.getText()));
         }
     }
 }

@@ -66,7 +66,7 @@ bool ServerConnection::connect()
 
     for (int i = 0; i < params.connectRetries; i++) {
         if (i != 0) {
-            logger->write("Connecting, retry " + i);
+            logger->write(QString("Connecting, retry ").arg(i));
         }
 
         sk = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -149,8 +149,7 @@ void ServerConnection::waitRead()
         getsockopt(sk, SOL_SOCKET, SO_ERROR, &so_error, &len);
         if (so_error != 0)
         {
-            QString text;
-            logger->write(text.sprintf("ERROR: %d, ", so_error) + getErrorText(so_error));
+            logger->write(QString("ERROR: %1, %2").arg(so_error).arg(getErrorText(so_error)));
         }
     }
 }
@@ -164,8 +163,7 @@ void ServerConnection::write(const QByteArray& data)
     int rc = ::write(sk, data.data(), data.length());
     if (rc < 0)
     {
-        QString text;
-        logger->write(text.sprintf("ERROR writing to socket: %d, ", rc) + getErrorText(rc));
+        logger->write(QString("ERROR writing to socket: %1, %2").arg(rc).arg(getErrorText(rc)));
     }
 }
 

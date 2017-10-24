@@ -55,7 +55,7 @@ bool BluetoothPort2::connectToDevice()
 
     for (int i = 0; i < connectRetries; i++) {
         if (i != 0) {
-            logger->write("Connecting RFCOMM socket, retry " + i);
+            logger->write(QString("Connecting RFCOMM socket, retry %1").arg(i));
         }
 
         sk = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
@@ -211,7 +211,7 @@ void BluetoothPort2::waitRead()
         socklen_t len = sizeof so_error;
         getsockopt(sk, SOL_SOCKET, SO_ERROR, &so_error, &len);
         if (so_error != 0) {
-            logger->write("ERROR: " + so_error);
+            logger->write(QString("ERROR: %1").arg(so_error));
         }
     }
 }

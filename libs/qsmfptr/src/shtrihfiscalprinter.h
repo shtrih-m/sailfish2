@@ -2332,7 +2332,7 @@ public:
     int writeBlock(QByteArray block);
     void sendBlocks();
     bool sendBlock(QByteArray block, QByteArray& result);
-    PrinterField getPrinterField(int table, int row, int field);
+    int getPrinterField(int table, int row, int field, PrinterField& printerField);
     void setPollInterval(int value);
     void lock();
     void unlock();
