@@ -4423,6 +4423,8 @@ int ShtrihFiscalPrinter::readModelParameters(ModelParameters& data)
         data.flags.capEJ5 = testBit(flags, 40);                // 40 – Поддержка ЭКЛЗ5
         data.flags.capScaleGraphics = testBit(flags, 41);      // 41 – Печать графики с масштабированием (команда 4FH)
         data.flags.capGraphics512 = testBit(flags, 42);        // 42 – Загрузка и печать графики-512 (команды 4DH, 4EH)
+        data.flags.capFS = testBit(flags, 43);                 // 43 – поддержка фискального накопителя
+        data.flags.capEoD = testBit(flags, 44);                // 44 – поддержка режима передачи данных через драйвер (EoD)
     }
     return resultCode;
 }

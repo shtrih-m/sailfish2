@@ -1337,6 +1337,8 @@ struct PrinterParametersFlags {
   bool capEJ5;                  // 40 – Поддержка ЭКЛЗ5
   bool capScaleGraphics;        // 41 – Печать графики с масштабированием (команда 4FH)
   bool capGraphics512;          // 42 – Загрузка и печать графики-512 (команды 4DH, 4EH)
+  bool capFS;                   // 43 – поддержка фискального накопителя
+  bool capEoD;                  // 44 – поддержка режима передачи данных через драйвер (EoD)
 };
 
 struct ModelParameters {
