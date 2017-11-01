@@ -250,6 +250,7 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
             catch(QException exception)
         {
             unlock();
+            //if (!canRepeatCommand(command.getCode())){
             exception.raise();
         }
         logger->writeRx(command.getRxData());
@@ -7105,3 +7106,166 @@ uint32_t ShtrihFiscalPrinter::getDocumentMac(FSFindDocument doc)
         default: return 0;
     }
 }
+
+bool ShtrihFiscalPrinter::canRepeatCommand(uint16_t commandCode)
+{
+  switch (commandCode)
+  {
+    case 0x01: // Get dump
+    case 0x02: // Get data block from dump
+    case 0x03: // Interrupt data stream
+    case 0x0F: // Get long serial number and long ECRRN
+    case 0x10: // Get short ECR status
+    case 0x11: // Get ECR status
+    case 0x12: // Print bold string
+    case 0x13: // Beep
+    case 0x14: // Set communication parameters
+    case 0x15: // Read communication parameters
+    case 0x16: // Technological reset
+    case 0x17: // Print string
+    case 0x18: // Print document header
+    case 0x19: // Test run
+    case 0x1A: // Get cash totalizer value
+    case 0x1B: // Get operation totalizer value
+    case 0x1C: // Write license
+    case 0x1D: // Read license
+    case 0x1E: // Write table
+    case 0x1F: // Read table
+    case 0x20: // Set decimal point position
+    case 0x21: // Set clock time
+    case 0x22: // Set calendar date
+    case 0x23: // Confirm date
+    case 0x24: // Initialize tables with default values
+    case 0x25: // Cut receipt
+    case 0x26: // Get font parameters
+    case 0x27: // Common clear
+    case 0x28: // Open cash drawer
+    case 0x29: // Feed
+    case 0x2A: // Eject slip
+    case 0x2B: // Interrupt test
+    case 0x2C: // Print operation totalizers report
+    case 0x2D: // Get table structure
+    case 0x2E: // Get field structure
+    case 0x2F: // Print string with font
+    case 0x40: // Daily report without cleaning
+    case 0x41: // Daily report with cleaning
+    case 0x42: // Print Department report
+    case 0x43: // Print tax report
+    case 0x4D: // Print graphics 512
+    case 0x4E: // Load graphics 512
+    case 0x4F: // Print scaled graphics
+    case 0x52: // Print fixed document header
+    case 0x53: // Print document footer
+    case 0x54: // Print trailer
+    case 0x60: // Set serial number
+    case 0x61: // Initialize FM
+    case 0x62: // Get FM totals
+    case 0x63: // Get last FM record date
+    case 0x64: // Get dates and sessions range
+    case 0x66: // Fiscal report in dates range
+    case 0x67: // Fiscal report in days range
+    case 0x68: // Interrupt full report
+    case 0x69: // Get fiscalization parameters
+    case 0x70: // Open fiscal slip
+    case 0x71: // Open standard fiscal slip
+    case 0x72: // Transaction on slip
+    case 0x73: // Standard transaction on slip
+    case 0x74: // Discount/charge on slip
+    case 0x75: // Standard discount/charge on slip
+    case 0x78: // Slip configuration
+    case 0x79: // Standard slip configuration
+    case 0x7A: // Fill slip buffer with nonfiscal information
+    case 0x7B: // Clear slip buffer string
+    case 0x7C: // Clear slip buffer
+    case 0x7D: // Print slip
+    case 0x7E: // Common slip configuration
+    case 0x89: // Receipt subtotal
+    case 0x8C: // Print last receipt duplicate
+    case 0x8D: // Open receipt
+    case 0xA0: // EJ department report in dates range
+    case 0xA1: // EJ department report in days range
+    case 0xA2: // EJ day report in dates range
+    case 0xA3: // EJ day report in days range
+    case 0xA4: // Print day totals by EJ day number
+    case 0xA5: // Print pay document from EJ by KPK number
+    case 0xA6: // Print EJ journal by day number
+    case 0xA7: // Interrupt full EJ report
+    case 0xA8: // Print EJ activization result
+    case 0xA9: // EJ activization
+    case 0xAA: // Close EJ archive
+    case 0xAB: // Get EJ serial number
+    case 0xAC: // Interrupt EJ
+    case 0xAD: // Get EJ status by code 1
+    case 0xAE: // Get EJ status by code 2
+    case 0xAF: // Test EJ integrity
+    case 0xB0: // Continue printing
+    case 0xB1: // Get EJ version
+    case 0xB2: // Initialize EJ
+    case 0xB3: // Get EJ report data
+    case 0xB4: // Get EJ journal
+    case 0xB5: // Get EJ document
+    case 0xB6: // Get department EJ report in dates range
+    case 0xB7: // Get EJ department report in days range
+    case 0xB8: // Get EJ day report in dates range
+    case 0xB9: // Get EJ day report in days range
+    case 0xBA: // Get EJ day totals by day number
+    case 0xBB: // Get EJ activization result
+    case 0xBC: // Get EJ error
+    case 0xC0: // Load graphics
+    case 0xC1: // Print graphics
+    case 0xC2: // Print barcode
+    case 0xC3: // Print exteneded graphics
+    case 0xC4: // Load extended graphics
+    case 0xC5: // Print line
+    case 0xC8: // Get line count in printing buffer
+    case 0xC9: // Get line from printing buffer
+    case 0xCA: // Clear printing buffer
+    case 0xD0: // Get ECR IBM status
+    case 0xD1: // Get short ECR IBM status
+    case 0xDE: // Print barcode 2D
+    case 0xF0: // Change shutter position
+    case 0xF1: // Discharge receipt from presenter
+    case 0xF3: // Set service center password
+    case 0xFC: // Get device type
+    case 0xFD: // Send commands to external device port
+    case 0xE4: // Print attribute
+    case 0xFF01: // FS: Read status
+    case 0xFF02: // FS: Read number
+    case 0xFF03: // FS: Read expiration time
+    case 0xFF04: // FS: Read version
+    case 0xFF05: // FS: Start activation
+    case 0xFF06: // FS: Do activation
+    case 0xFF07: // FS: Clear status
+    case 0xFF08: // FS: Void document
+    case 0xFF09: // FS: Read activation result
+    case 0xFF0A: // FS: Find document by number
+    case 0xFF0B: // FS: Open day
+    case 0xFF0C: // FS: Send TLV data
+    case 0xFF0D: // FS: Registration with discount/charge
+    case 0xFF0E: // FS: Storno with discount/charge
+    case 0xFF30: // FS: Read data in buffer
+    case 0xFF31: // FS: Read data block from buffer
+    case 0xFF32: // FS: Start write buffer
+    case 0xFF33: // FS: Write data block in buffer
+    case 0xFF34: // FS: Create fiscalization report
+    case 0xFF35: // FS: Start correction receipt
+    case 0xFF36: // FS: Create correction receipt
+    case 0xFF37: // FS: Start report on Calc
+    case 0xFF38: // FS: Create report on Calc
+    case 0xFF39: // FS: Read data transfer status
+    case 0xFF3A: // FS: Read fiscal document in TLV format
+    case 0xFF3B: // FS: Read fiscal document TLV
+    case 0xFF3C: // FS: Read server ticket on document number
+    case 0xFF3D: // FS: Start close fiscal mode
+    case 0xFF3E: // FS: Close fiscal mode
+    case 0xFF3F: // FS: Read fiscal documents count without server ticket
+    case 0xFF40: // FS: Read fiscal day parameters
+    case 0xFF41: // FS: Start opening fiscal day
+    case 0xFF42: // FS: Start closing fiscal day
+    case 0xFF43: // FS: Close day
+    case 0xFF44: // FS: Registration with discount/charge 2
+      return true;
+  }
+  return false;
+}
+

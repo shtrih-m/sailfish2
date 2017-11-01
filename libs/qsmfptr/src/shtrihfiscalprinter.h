@@ -2398,6 +2398,7 @@ public:
     void jrnPrintDocRange(int N1, int N2);
     QString readParameter(int ParamId);
 
+    bool canRepeatCommand(uint16_t commandCode);
     uint32_t getDocumentMac(FSFindDocument doc);
     FSDocument1 decodeDocument1(QByteArray data);
     FSDocument2 decodeDocument2(QByteArray data);

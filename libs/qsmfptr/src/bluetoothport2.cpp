@@ -44,6 +44,8 @@ void BluetoothPort2::setAddress(QString value)
 
 bool BluetoothPort2::connectToDevice()
 {
+    logger->write("connectToDevice");
+
     if (isConnected)
         return true;
 
@@ -96,9 +98,12 @@ bool BluetoothPort2::connectToDevice()
 
 void BluetoothPort2::disconnect()
 {
+    logger->write("disconnect");
+
     if (!isConnected)
         return;
     close(sk);
+    isConnected = false;
 }
 
 void BluetoothPort2::setReadTimeout(int value)
@@ -170,29 +175,26 @@ QString getErrorText(int code){
 
 QByteArray BluetoothPort2::readBytes(int count)
 {
+    logger->write("readBytes");
+
     connectToDevice();
     QByteArray packet;
 
-    QElapsedTimer timer;
-    timer.start();
     char buf[count];
-    while (true) {
+    while (true)
+    {
         waitRead();
         int toread = count - packet.length();
         int n = read(sk, &buf, toread);
-        if (n < 0) {
-            logger->write("ERROR reading from socket");
-            if (errno != EAGAIN){
-                throw new PortException(getErrorText(errno));
-             }        
-}
-
+        if (n < 0)
+        {
+            disconnect();
+            logger->write(getErrorText(errno));
+            throw new PortException(getErrorText(errno));
+        }
         packet.append(buf, n);
-        if (packet.length() >= count)
+        if (packet.length() >= count){
             break;
-        if (timer.elapsed() > readTimeout) {
-            qCritical() << "Timeout error";
-            throw new PortException("Timeout error");
         }
     }
     return packet;
@@ -227,8 +229,10 @@ void BluetoothPort2::writeBytes(const QByteArray& data)
 {
     connectToDevice();
     int rc = write(sk, data.data(), data.length());
-    if (rc < 0)
+    if (rc < 0){
+        disconnect();
         logger->write("ERROR writing to socket");
+    }
 }
 
 QString BluetoothPort2::findDevice()

@@ -23,6 +23,7 @@
 
 SocketPort::SocketPort(std::string address, int port, Logger* logger)
 {
+    (void)logger;
     this->address = address;
     this->port = port;
     readTimeout = 1000;

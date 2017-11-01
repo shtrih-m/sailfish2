@@ -13,7 +13,7 @@
 
 #ifndef PRINTERTYPES_H
 #define PRINTERTYPES_H
-#include <stdint.h>
+
 
 struct PrinterDate {
     uint8_t day;
@@ -26,5 +26,9 @@ struct PrinterTime {
     uint8_t min;
     uint8_t sec;
 };
+
+#define SMFPTR_OK               0
+#define SMFPTR_TIMEOUT_ERROR   -1
+
 
 #endif /* PRINTERTYPES_H */

@@ -37,35 +37,38 @@ PrinterTest::~PrinterTest()
 void PrinterTest::execute()
 {
     qDebug("PrinterTest::execute");
-    try {
 
 
-        //JournalPrinter journal("journal.txt");
-        //journal.show(journal.readDay(7));
-        //journal.show(journal.readAll());
-        //journal.show(journal.readDocRange(21, 22));
-        //journal.deleteFile();
+    //JournalPrinter journal("journal.txt");
+    //journal.show(journal.readDay(7));
+    //journal.show(journal.readAll());
+    //journal.show(journal.readDocRange(21, 22));
+    //journal.deleteFile();
 
-        connectPrinter();
-        printZReport();
-        printSaleReceipt();
-        disconnectPrinter();
-
-        //journal.show(journal.readDay(17));
-        //journal.show(journal.readDay(5));
-        //journal.show(journal.readDoc(121));
-        //journal.show(journal.readDoc(122));
-        //journal.show(journal.readDocRange(121, 122));
-
-        //printer->jrnPrintAll();
-        //printer->jrnPrintDoc(114);
-        //printer->jrnPrintCurrentDay();
-        //printer->jrnPrintDay(1);
-        //printer->jrnPrintDocRange(107, 109);
-        //disconnectPrinter();
-    } catch (PortException e) {
-        qDebug() << e.getText();
+    connectPrinter();
+    while (true)
+    {
+        try
+        {
+            readShortStatus();
+        } catch (...) {
+            qDebug() << "Exception caught...";
+        }
     }
+    disconnectPrinter();
+
+    //journal.show(journal.readDay(17));
+    //journal.show(journal.readDay(5));
+    //journal.show(journal.readDoc(121));
+    //journal.show(journal.readDoc(122));
+    //journal.show(journal.readDocRange(121, 122));
+
+    //printer->jrnPrintAll();
+    //printer->jrnPrintDoc(114);
+    //printer->jrnPrintCurrentDay();
+    //printer->jrnPrintDay(1);
+    //printer->jrnPrintDocRange(107, 109);
+    //disconnectPrinter();
 }
 
 void PrinterTest::deleteLogFile(){
