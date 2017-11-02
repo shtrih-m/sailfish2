@@ -150,6 +150,7 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     sleepTimeInMs = 1000;
     journal = new JournalPrinter("journal.txt");
     filter = new PrinterFilter();
+    connected = false;
 }
 
 ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
@@ -328,8 +329,9 @@ int ShtrihFiscalPrinter::waitForPrinting()
 
 void ShtrihFiscalPrinter::connectDevice()
 {
-    protocol->connect();
+    if (connected) return;
 
+    protocol->connect();
     check(readDeviceType(deviceType));
 
     int lineNumber = 1;
@@ -375,6 +377,7 @@ void ShtrihFiscalPrinter::connectDevice()
     logger->write(QString("capPrintGraphics1: %1").arg(capPrintGraphics1));
     logger->write(QString("capPrintGraphics2: %1").arg(capPrintGraphics2));
     logger->write(QString("capPrintGraphics3: %1").arg(capPrintGraphics3));
+    connected = true;
 }
 
 bool ShtrihFiscalPrinter::isShtrihMobile(){

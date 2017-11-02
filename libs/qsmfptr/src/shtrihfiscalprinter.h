@@ -2408,6 +2408,7 @@ public:
     FSDocument21 decodeDocument21(QByteArray data);
     Logger* getLogger();
 private:
+    bool connected;
     Logger* logger;
     QMutex* mutex;
     TlvTags tlvTags;

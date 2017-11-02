@@ -361,16 +361,12 @@ void PrinterTest::connectPrinter()
     port->setWriteTimeout(10000);
     port->setConnectTimeout(3000);
     port->setConnectRetries(3);
-    port->connectToDevice();
-    qDebug() << "Port opened!";
 
     PrinterProtocol2* protocol = new PrinterProtocol2(port, logger);
     printer->setProtocol(protocol);
     printer->setTimeout(10000);
     printer->setFdoThreadEnabled(false);
     printer->setJournalEnabled(true);
-    printer->connectDevice();
-    qDebug("Printer connected!");
 }
 
 void PrinterTest::disconnectPrinter()
@@ -573,6 +569,7 @@ void PrinterTest::beep()
 
 void PrinterTest::readShortStatus()
 {
+    printer->connectDevice();
     qDebug("Read short status...");
     ReadShortStatusCommand command;
     check(printer->readShortStatus(command));
