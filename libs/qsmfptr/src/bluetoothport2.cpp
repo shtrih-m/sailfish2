@@ -44,11 +44,11 @@ void BluetoothPort2::setAddress(QString value)
 
 bool BluetoothPort2::connectToDevice()
 {
-    logger->write("connectToDevice");
 
     if (isConnected)
         return true;
 
+    logger->write("connectToDevice");
     struct sockaddr_rc raddr;
     raddr.rc_family = AF_BLUETOOTH;
     std::string saddress = address.toStdString();

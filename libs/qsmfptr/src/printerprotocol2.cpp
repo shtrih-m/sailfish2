@@ -101,9 +101,10 @@ PrinterProtocol2::PrinterProtocol2(PrinterPort* port, Logger* logger)
 {
     this->port = port;
     this->logger = logger;
-    isSynchronized = false;
+
     maxRepeatCount = 3;
     syncTimeout = 1000;
+    isSynchronized = false;
 }
 
 void PrinterProtocol2::connect()
@@ -121,8 +122,10 @@ void PrinterProtocol2::synchronizeFrames(int timeout)
 {
     if (isSynchronized)
         return;
+
     port->setReadTimeout(timeout);
-    for (int i = 0; i < maxRepeatCount; i++) {
+    for (int i = 0; i < maxRepeatCount; i++)
+    {
         try {
             QByteArray ba;
             ba = frame.encode(ba);
@@ -131,9 +134,9 @@ void PrinterProtocol2::synchronizeFrames(int timeout)
             isSynchronized = true;
             frame.incNumber();
             break;
-        } catch (PortException e)
+        } catch (...)
         {
-            logger->write(QString("ERROR: %1").arg(e.getText()));
+            logger->write("Error synchronizing frames");
         }
     }
 }
@@ -160,8 +163,8 @@ int PrinterProtocol2::send(PrinterCommand& command)
     frame.incNumber();
     return command.decode(rx);
 }
-// 8F 00 01 09 00
 
+// 8F 00 01 09 00
 int PrinterProtocol2::readAnswer(bool sync)
 {
     int num = 0;
@@ -191,7 +194,7 @@ int PrinterProtocol2::readAnswer(bool sync)
             uint16_t frameCrc = frame.getCRC(stream.getBuffer());
             if (crc != frameCrc) {
                 logger->write("Invalid CRC !!!");
-                //throw new TextException("Invalid CRC");
+                throw new TextException("Invalid CRC");
             }
             break;
         }

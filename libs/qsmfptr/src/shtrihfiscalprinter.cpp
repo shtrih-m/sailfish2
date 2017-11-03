@@ -118,7 +118,7 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     : QObject(parent)
 {
     this->logger = logger;
-    mutex = new QMutex(QMutex::RecursionMode::Recursive);
+
     taxPassword = 0;
     usrPassword = 1;
     sysPassword = 30;
@@ -148,9 +148,11 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     userNameEnabled = true;
     userName = "";
     sleepTimeInMs = 1000;
-    journal = new JournalPrinter("journal.txt");
-    filter = new PrinterFilter();
     connected = false;
+
+    filter = new PrinterFilter();
+    journal = new JournalPrinter("journal.txt");
+    mutex = new QMutex(QMutex::RecursionMode::Recursive);
 }
 
 ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
@@ -540,7 +542,8 @@ int ShtrihFiscalPrinter::writeBlock(QByteArray block)
 
 bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
 {
-    logger->write("readBlock");
+    qDebug() << "readBlock";
+    //logger->write("readBlock");
 
     lock();
     try{

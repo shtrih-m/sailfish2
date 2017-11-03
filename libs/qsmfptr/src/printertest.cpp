@@ -26,10 +26,25 @@ PrinterTest::PrinterTest(QObject* parent)
 {
     logger = new Logger("PrinterTest.log");
     printer = new ShtrihFiscalPrinter(0, logger);
+
+    port = new BluetoothPort2(logger);
+    port->setAddress("00:01:90:C5:60:F7");
+    port->setReadTimeout(10000);
+    port->setWriteTimeout(10000);
+    port->setConnectTimeout(3000);
+    port->setConnectRetries(3);
+
+    protocol = new PrinterProtocol2(port, logger);
+    printer->setProtocol(protocol);
+    printer->setTimeout(10000);
+    printer->setFdoThreadEnabled(true);
+    printer->setJournalEnabled(true);
 }
 
 PrinterTest::~PrinterTest()
 {
+    delete port;
+    delete protocol;
     delete printer;
     delete logger;
 }
@@ -38,19 +53,21 @@ void PrinterTest::execute()
 {
     qDebug("PrinterTest::execute");
 
-
     //JournalPrinter journal("journal.txt");
     //journal.show(journal.readDay(7));
     //journal.show(journal.readAll());
     //journal.show(journal.readDocRange(21, 22));
     //journal.deleteFile();
 
-    connectPrinter();
     while (true)
     {
         try
         {
-            readShortStatus();
+            connectPrinter();
+            //readShortStatus();
+            printString();
+            QThread::msleep(1000);
+
         } catch (...) {
             qDebug() << "Exception caught...";
         }
@@ -355,18 +372,8 @@ void PrinterTest::testSprintf()
 
 void PrinterTest::connectPrinter()
 {
-    BluetoothPort2* port = new BluetoothPort2(logger);
-    port->setAddress("00:01:90:C5:60:F7");
-    port->setReadTimeout(10000);
-    port->setWriteTimeout(10000);
-    port->setConnectTimeout(3000);
-    port->setConnectRetries(3);
-
-    PrinterProtocol2* protocol = new PrinterProtocol2(port, logger);
-    printer->setProtocol(protocol);
-    printer->setTimeout(10000);
-    printer->setFdoThreadEnabled(false);
-    printer->setJournalEnabled(true);
+    printer->connectDevice();
+    //qDebug("Printer connected!");
 }
 
 void PrinterTest::disconnectPrinter()
@@ -569,11 +576,13 @@ void PrinterTest::beep()
 
 void PrinterTest::readShortStatus()
 {
-    printer->connectDevice();
     qDebug("Read short status...");
     ReadShortStatusCommand command;
     check(printer->readShortStatus(command));
-    if (printer->succeeded(command.resultCode)) {
+    if (printer->succeeded(command.resultCode))
+    {
+        qDebug() << "Read short status: OK";
+        /*
         qDebug() << "Operator                 : " << command.operatorNumber;
 
         qDebug().nospace() << "Flags                    : 0x" << StringUtils::intToHex(command.flags, 2) << ", " << command.flags;
@@ -587,6 +596,7 @@ void PrinterTest::readShortStatus()
         qDebug() << "Electronic journal error : " << command.ejError;
         qDebug() << "Battery voltage          : " << command.batteryVoltage;
         qDebug() << "Supply voltage           : " << command.supplyVoltage;
+        */
     }
 }
 
@@ -640,12 +650,10 @@ void PrinterTest::readPortParameters()
 
 void PrinterTest::printString()
 {
-    for (int i=0;i<10;i++){
-        PrintStringCommand command;
-        command.flags = 3;
-        command.text = "Привет, мир!!!";
-        check(printer->printString(command));
-    }
+    PrintStringCommand command;
+    command.flags = 3;
+    command.text = "Привет, мир!!!";
+    check(printer->printString(command));
 }
 
 void PrinterTest::printDocHeader()

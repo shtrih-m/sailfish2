@@ -11,7 +11,9 @@ class Logger
 public:
     Logger(QString fileName);
     ~Logger();
-    void openFile();
+
+    bool isOpened();
+    bool openFile();
     void closeFile();
     void writeTx(QByteArray ba);
     void writeRx(QByteArray ba);

@@ -14,7 +14,7 @@ Logger::~Logger()
     closeFile();
 }
 
-void Logger::openFile()
+bool Logger::openFile()
 {
     if ((file == 0)&&(!fileName.isEmpty()))
     {
@@ -22,11 +22,16 @@ void Logger::openFile()
         file->setFileName(fileName);
         file->open(QIODevice::Append | QIODevice::Text);
     }
+    return isOpened();
+}
+
+bool Logger::isOpened(){
+    return file != 0;
 }
 
 void Logger::closeFile()
 {
-    if (file != 0){
+    if (file){
         file->close();
         delete file;
         file = 0;
@@ -37,7 +42,7 @@ void Logger::write(const QString &value)
 {
     qDebug() << value;
 
-    openFile();
+    if (!openFile()) return;
     QString text = value;// + "";
     if (m_showDate)
         text = QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss ") + text + "\r\n";
@@ -71,4 +76,3 @@ void Logger::write(QString prefix, QByteArray ba)
 void Logger::setShowDateTime(bool value) {
     m_showDate = value;
 }
-

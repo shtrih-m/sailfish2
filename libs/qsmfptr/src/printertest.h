@@ -7,6 +7,9 @@
 #include <QBluetoothServiceInfo>
 
 #include "shtrihfiscalprinter.h"
+#include "bluetoothport2.h"
+#include "printerprotocol1.h"
+#include "printerprotocol2.h"
 #include "logger.h"
 
 
@@ -25,9 +28,13 @@ public Q_SLOTS:
     void serviceDiscovered(const QBluetoothServiceInfo& service);
 
 private:
-    Logger* logger;
     int password;
+    Logger* logger;
+    BluetoothPort2* port;
+    PrinterProtocol2* protocol;
     ShtrihFiscalPrinter* printer;
+
+
     QBluetoothLocalDevice localDevice;
     QBluetoothDeviceDiscoveryAgent discoveryAgent;
 

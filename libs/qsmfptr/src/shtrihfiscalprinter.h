@@ -2408,10 +2408,18 @@ public:
     FSDocument21 decodeDocument21(QByteArray data);
     Logger* getLogger();
 private:
-    bool connected;
     Logger* logger;
     QMutex* mutex;
     TlvTags tlvTags;
+    IPrinterFilter* filter;
+    PrinterProtocol* protocol;
+    std::vector<PrinterImage> images;
+    PrinterFields fields;
+    ServerParams serverParams;
+    DeviceTypeCommand deviceType;
+    JournalPrinter* journal;
+
+    bool connected;
     int pollInterval;
     bool stopFlag;
     bool fdoThreadEnabled;
@@ -2421,6 +2429,7 @@ private:
     uint32_t sysPassword;
     uint32_t taxPassword;
     bool isFiscalized;
+    bool journalEnabled;
     bool capFiscalStorage;
     bool capLoadGraphics1;
     bool capLoadGraphics2;
@@ -2428,20 +2437,12 @@ private:
     bool capPrintGraphics1;
     bool capPrintGraphics2;
     bool capPrintGraphics3;
-    PrinterProtocol* protocol;
     int startLine;
-    std::vector<PrinterImage> images;
-    IPrinterFilter* filter;
     uint8_t numHeaderRow;
     uint8_t numTrailerRow;
     uint8_t numHeaderLines;
     uint8_t numTrailerLines;
-    PrinterFields fields;
-    ServerParams serverParams;
     QString userName;
-    DeviceTypeCommand deviceType;
-    JournalPrinter* journal;
-    bool journalEnabled;
     QString fiscalID;
     QString regNumber;
     QString serialNumber;
@@ -2458,7 +2459,9 @@ public:
     }
     void setFilter(IPrinterFilter* value)
     {
-        delete filter;
+        if (filter){
+            delete filter;
+        }
         filter = value;
     }
 
