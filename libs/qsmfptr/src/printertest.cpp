@@ -53,9 +53,13 @@ void PrinterTest::execute()
 {
     qDebug("PrinterTest::execute");
 
-    //JournalPrinter journal("journal.txt");
-    //journal.show(journal.readDay(7));
+
+    JournalPrinter journal("journal.txt");
+    journal.show(journal.readDoc(28));
+
+/*
     //journal.show(journal.readAll());
+    //journal.show(journal.readDay(7));
     //journal.show(journal.readDocRange(21, 22));
     //journal.deleteFile();
 
@@ -86,6 +90,7 @@ void PrinterTest::execute()
     //printer->jrnPrintDay(1);
     //printer->jrnPrintDocRange(107, 109);
     //disconnectPrinter();
+    */
 }
 
 void PrinterTest::deleteLogFile(){

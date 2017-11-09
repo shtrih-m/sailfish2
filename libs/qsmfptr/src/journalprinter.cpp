@@ -94,10 +94,12 @@ QStringList JournalPrinter::readAll()
 
 int JournalPrinter::getDocumentNumber(QString line)
 {
-    if (line.contains("#"))
+    if (line.contains("ФД:"))
     {
-        int startIndex = line.indexOf("#") + 1;
-        QString number = line.mid(startIndex, 4);
+        int startIndex = line.indexOf("ФД:") + 3;
+        QString number = line.right(line.length()-startIndex);
+        startIndex = number.indexOf(" ");
+        number = number.left(startIndex + 1);
         return number.toInt();
     }
     return -1;
@@ -143,7 +145,7 @@ QStringList JournalPrinter::getDocument(int docNumber)
     int index2 = -1;
     QStringList lines = readAll();
 
-    for (int i = lines.size() - 1; i >= 0; i--) {
+    for (int i = 0; i < lines.size(); i++) {
         QString line = lines.at(i);
         int docNum = getDocumentNumber(line);
 
@@ -245,3 +247,7 @@ void JournalPrinter::show(QStringList lines)
         qDebug() << "SHOW: " << lines.at(i);
     }
 }
+
+
+
+
