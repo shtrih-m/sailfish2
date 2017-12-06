@@ -2124,7 +2124,7 @@ public:
     bool getJournalEnabled();
     void setJournalEnabled(bool value);
     int send(PrinterCommand& command);
-    void connectDevice();
+    int connectDevice();
     void disconnectDevice();
     bool succeeded(int rc);
     bool failed(int rc);
@@ -2389,7 +2389,7 @@ public:
     void setServerParams(ServerParams value);
     DeviceTypeCommand getDeviceType();
     void beforeCloseReceipt();
-    void printLines(QStringList lines);
+    int printLines(QStringList lines);
 
     void jrnPrintAll();
     void jrnPrintCurrentDay();

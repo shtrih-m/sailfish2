@@ -329,12 +329,14 @@ int ShtrihFiscalPrinter::waitForPrinting()
     return rc;
 }
 
-void ShtrihFiscalPrinter::connectDevice()
+int ShtrihFiscalPrinter::connectDevice()
 {
-    if (connected) return;
+    int rc = 0;
+    if (connected) return rc;
 
     protocol->connect();
-    check(readDeviceType(deviceType));
+    rc = readDeviceType(deviceType);
+    if (failed(rc)) return rc;
 
     int lineNumber = 1;
     LoadGraphicsCommand loadCommand;
@@ -380,6 +382,7 @@ void ShtrihFiscalPrinter::connectDevice()
     logger->write(QString("capPrintGraphics2: %1").arg(capPrintGraphics2));
     logger->write(QString("capPrintGraphics3: %1").arg(capPrintGraphics3));
     connected = true;
+    return rc;
 }
 
 bool ShtrihFiscalPrinter::isShtrihMobile(){
@@ -542,13 +545,17 @@ int ShtrihFiscalPrinter::writeBlock(QByteArray block)
 
 bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
 {
-    qDebug() << "readBlock";
-    //logger->write("readBlock");
+    logger->write("readBlock");
 
     lock();
     try{
         FSBufferStatus bufferStatus;
-        check(fsReadBufferStatus(bufferStatus));
+        int rc = fsReadBufferStatus(bufferStatus);
+        if (failed(rc)) {
+            unlock();
+            return false;
+        }
+
         logger->write(QString("bufferStatus.dataSize: %1").arg(bufferStatus.dataSize));
 
         if (bufferStatus.dataSize <= 0) {
@@ -570,7 +577,12 @@ bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
             if (bytesToRead < blockSize){
                 dataBlock.size = bytesToRead;
             }
-            check(fsReadBufferBlock(dataBlock));
+            rc = fsReadBufferBlock(dataBlock);
+            if (failed(rc)) {
+                unlock();
+                return false;
+            }
+
             block.append(dataBlock.data);
             bytesToRead -= blockSize;
         }
@@ -579,7 +591,8 @@ bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
     catch(QException exception)
     {
         unlock();
-        exception.raise();
+        logger->write("readBlock failed");
+        return false;
     }
     logger->write("readBlock: OK");
     return true;
@@ -6912,22 +6925,25 @@ int ShtrihFiscalPrinter::readTotals(PrinterTotals& data){
     return data.resultCode;
 }
 
-void ShtrihFiscalPrinter::printLines(QStringList lines)
+int ShtrihFiscalPrinter::printLines(QStringList lines)
 {
+    int rc = 0;
     logger->write("printLines");
     bool journalEnabled = getJournalEnabled();
     setJournalEnabled(false);
     try{
-        for (int i=0;i<lines.length();i++){
-            check(printLine(lines.at(i)));
+        for (int i=0;i<lines.length();i++)
+        {
+            rc = printLine(lines.at(i));
+            if (failed(rc)) return rc;
         }
     }
     catch(QException exception)
     {
         setJournalEnabled(journalEnabled);
-        throw exception;
     }
     setJournalEnabled(journalEnabled);
+    return rc;
 }
 
 void ShtrihFiscalPrinter::jrnPrintAll()
