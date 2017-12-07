@@ -63,12 +63,12 @@ public:
 
 class PrinterPort {
 public:
-    virtual bool connectToDevice() = 0;
-    virtual void disconnect() = 0;
-    virtual uint8_t readByte() = 0;
-    virtual QByteArray readBytes(int count) = 0;
-    virtual void writeByte(char data) = 0;
-    virtual void writeBytes(const QByteArray& data) = 0;
+    virtual int connectToDevice() = 0;
+    virtual int disconnect() = 0;
+    virtual int readByte(uint8_t& data) = 0;
+    virtual int readBytes(int count, QByteArray& data) = 0;
+    virtual int writeByte(char data) = 0;
+    virtual int writeBytes(const QByteArray& data) = 0;
     virtual void setReadTimeout(int value) = 0;
     virtual void setWriteTimeout(int value) = 0;
     virtual ~PrinterPort() = default;
@@ -76,8 +76,8 @@ public:
 
 class PrinterProtocol {
 public:
-    virtual void connect() = 0;
-    virtual void disconnect() = 0;
+    virtual int connect() = 0;
+    virtual int disconnect() = 0;
     virtual int send(PrinterCommand& command) = 0;
     virtual ~PrinterProtocol() = default;
 };

@@ -31,17 +31,17 @@ private:
     int maxRepeatCount;
     int syncTimeout;
 
-    int readAnswer(bool sync);
-    long readWord();
-    uint8_t readByte();
-    QByteArray readBytes(int count);
-    void synchronizeFrames(int timeout);
+    int readByte(uint8_t& C);
+    int readWord(uint16_t& V);
+    int readAnswer(bool sync, uint16_t& num);
+    int readBytes(int count, QByteArray& rx);
+    int synchronizeFrames(int timeout);
 
 public:
     PrinterProtocol2(PrinterPort* port, Logger* logger);
 
-    void connect();
-    void disconnect();
+    int connect();
+    int disconnect();
     int send(PrinterCommand& command);
 };
 

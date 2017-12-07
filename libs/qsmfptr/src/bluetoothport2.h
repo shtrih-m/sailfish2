@@ -10,16 +10,17 @@ class BluetoothPort2 : public QObject, public PrinterPort {
 public:
     BluetoothPort2(Logger* logger);
 
-    bool connectToDevice();
-    void disconnect();
-    uint8_t readByte();
+    int connectToDevice();
+    int disconnect();
+    int writeByte(char data);
+    int readByte(uint8_t& data);
+    int writeBytes(const QByteArray& data);
+    int readBytes(int count, QByteArray& packet);
+
     void setReadTimeout(int value);
     void setWriteTimeout(int value);
     void setConnectTimeout(int value);
     void setConnectRetries(int value);
-    QByteArray readBytes(int count);
-    void writeByte(char data);
-    void writeBytes(const QByteArray& data);
     void setAddress(QString value);
     QString findDevice();
 private:

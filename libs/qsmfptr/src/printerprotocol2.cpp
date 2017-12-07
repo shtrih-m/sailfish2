@@ -107,47 +107,54 @@ PrinterProtocol2::PrinterProtocol2(PrinterPort* port, Logger* logger)
     isSynchronized = false;
 }
 
-void PrinterProtocol2::connect()
+int PrinterProtocol2::connect()
 {
-    port->connectToDevice();
-    synchronizeFrames(syncTimeout);
+    int rc = port->connectToDevice();
+    if (rc != 0) return rc;
+    return synchronizeFrames(syncTimeout);
 }
 
-void PrinterProtocol2::disconnect()
+int PrinterProtocol2::disconnect()
 {
-    port->disconnect();
+    return port->disconnect();
 }
 
-void PrinterProtocol2::synchronizeFrames(int timeout)
+int PrinterProtocol2::synchronizeFrames(int timeout)
 {
+    int rc = 0;
     if (isSynchronized)
-        return;
+        return rc;
 
     port->setReadTimeout(timeout);
     for (int i = 0; i < maxRepeatCount; i++)
     {
-        try {
-            QByteArray ba;
-            ba = frame.encode(ba);
-            port->writeBytes(ba);
-            frame.setNumber(readAnswer(true));
-            isSynchronized = true;
-            frame.incNumber();
-            break;
-        } catch (...)
-        {
-            logger->write("Error synchronizing frames");
-        }
+        QByteArray ba;
+        ba = frame.encode(ba);
+        rc = port->writeBytes(ba);
+        if (rc != 0) continue;
+
+        uint16_t num;
+        rc = readAnswer(true, num);
+        if (rc != 0) continue;
+
+        frame.setNumber(num);
+        isSynchronized = true;
+        frame.incNumber();
+        break;
     }
 }
 
 int PrinterProtocol2::send(PrinterCommand& command)
 {
+    int rc = 0;
     int retryNum = 1;
     port->setReadTimeout(command.getTimeout());
     QByteArray ba = frame.encode(command.encode());
     port->writeBytes(ba);
-    int frameNum = readAnswer(false);
+    uint16_t frameNum;
+    rc = readAnswer(false, frameNum);
+    if (rc != 0) return rc;
+
     if (frameNum != frame.getNumber()) {
         if ((retryNum != 1) && (frameNum == (frame.getNumber() - 1))) {
             frame.setNumber(frameNum);
@@ -165,26 +172,43 @@ int PrinterProtocol2::send(PrinterCommand& command)
 }
 
 // 8F 00 01 09 00
-int PrinterProtocol2::readAnswer(bool sync)
+int PrinterProtocol2::readAnswer(bool sync, uint16_t& num)
 {
-    int num = 0;
+    num = 0;
+    int rc = 0;
     while (true)
     {
-        while (readByte() != STX) {
+        uint8_t C = 0;
+        while (C != STX)
+        {
+            rc = readByte(C);
+            if (rc != 0) return rc;
         }
         rx.clear();
-        int len = readWord();
+        uint16_t len;
+        rc = readWord(len);
+        if (rc != 0) return rc;
 
-        if (len == 0x0100){
-            num = readWord();
+        if (len == 0x0100)
+        {
+            rc = readWord(num);
+            if (rc != 0) return rc;
+
             if (sync) break;
         } else
         {
             if (len > 1) {
-                num = readWord();
-                rx.append(readBytes(len - 2));
+                rc = readWord(num);
+                if (rc != 0) return rc;
+
+                QByteArray ba;
+                rc = readBytes(len - 2, ba);
+                if (rc != 0) return rc;
+                rx.append(ba);
             }
-            uint16_t crc = readWord();
+            uint16_t crc;
+            rc = readWord(crc);
+            if (rc != 0) return rc;
 
             MemStream stream;
             stream.writeShort(len);
@@ -193,37 +217,53 @@ int PrinterProtocol2::readAnswer(bool sync)
 
             uint16_t frameCrc = frame.getCRC(stream.getBuffer());
             if (crc != frameCrc) {
-                logger->write("Invalid CRC !!!");
-                throw new TextException("Invalid CRC");
+                logger->write("Invalid CRC.");
+                return SMFPTR_INVALID_CRC;
             }
             break;
         }
     }
-    return num;
+    return rc;
 }
 
-QByteArray PrinterProtocol2::readBytes(int count)
+int PrinterProtocol2::readBytes(int count, QByteArray& rx)
 {
-    QByteArray ba;
-    for (int i = 0; i < count; i++) {
-        ba.append(readByte());
+    uint8_t B;
+    int rc = 0;
+    for (int i = 0; i < count; i++)
+    {
+        rc = readByte(B);
+        if (rc != 0) return rc;
+        rx.append(B);
     }
-    return ba;
+    return rc;
 }
 
-long PrinterProtocol2::readWord()
+int PrinterProtocol2::readWord(uint16_t& V)
 {
-    uint8_t b1 = readByte();
-    uint8_t b2 = readByte();
-    long result = b1 + (b2 * 256);
-    return result;
+    int rc = 0;
+    uint8_t b1;
+    rc = readByte(b1);
+    if (rc != 0) return rc;
+
+    uint8_t b2;
+    rc = readByte(b2);
+    if (rc != 0) return rc;
+
+    V = b1 + (b2 * 256);
+    return rc;
 }
 
-uint8_t PrinterProtocol2::readByte()
+int PrinterProtocol2::readByte(uint8_t& C)
 {
-    uint8_t C = port->readByte();
-    if (C == ESC) {
-        C = port->readByte();
+    int rc = port->readByte(C);
+    if (rc != 0) return rc;
+
+    if (C == ESC)
+    {
+        rc = port->readByte(C);
+        if (rc != 0) return rc;
+
         if (C == TSTX) {
             C = STX;
         } else {
@@ -232,5 +272,5 @@ uint8_t PrinterProtocol2::readByte()
             }
         }
     }
-    return C;
+    return rc;
 }

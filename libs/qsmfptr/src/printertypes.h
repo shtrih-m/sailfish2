@@ -27,8 +27,9 @@ struct PrinterTime {
     uint8_t sec;
 };
 
-#define SMFPTR_OK               0
-#define SMFPTR_TIMEOUT_ERROR   -1
+#define SMFPTR_OK                0
+#define SMFPTR_TIMEOUT_ERROR    -1
+#define SMFPTR_INVALID_CRC      -2
 
 
 #endif /* PRINTERTYPES_H */

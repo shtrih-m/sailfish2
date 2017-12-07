@@ -2,12 +2,13 @@
 #include "printerprotocol1.h"
 #include "shtrihfiscalprinter.h"
 #include "utils.h"
+#include "logger.h"
 #include <QDebug>
 
-const char STX = 0x02;
-const char ENQ = 0x05;
-const char ACK = 0x06;
-const char NAK = 0x15;
+const uint8_t STX = 0x02;
+const uint8_t ENQ = 0x05;
+const uint8_t ACK = 0x06;
+const uint8_t NAK = 0x15;
 // maximum counters
 const int maxEnqNumber = 3;
 const int maxNakCommandNumber = 3;
@@ -15,162 +16,215 @@ const int maxNakAnswerNumber = 3;
 const int maxAckNumber = 3;
 const int maxRepeatCount = 1;
 
-PrinterProtocol1::PrinterProtocol1(PrinterPort* port)
+PrinterProtocol1::PrinterProtocol1(PrinterPort* port, Logger* logger)
 {
     this->port = port;
+    this->logger = logger;
     byteTimeout = 1000;
 }
 
-void PrinterProtocol1::connect()
+int PrinterProtocol1::connect()
 {
-    port->connectToDevice();
-    sendENQ();
+    int rc = port->connectToDevice();
+    if (rc != 0) return rc;
+    return sendENQ();
 }
 
-void PrinterProtocol1::sendENQ()
+int PrinterProtocol1::sendENQ()
 {
+    int rc = 0;
     int ackNumber = 0;
     int enqNumber = 0;
 
     for (;;) {
-        try {
             port->setReadTimeout(byteTimeout);
             port->writeByte(ENQ);
 
-            char B = port->readByte();
+            uint8_t B;
+            rc = port->readByte(B);
+            if (rc != 0)
+            {
+                ackNumber++;
+                continue;
+            }
+
+            QByteArray rx;
             switch (B) {
             case ACK:
-                readAnswer(0);
+                readAnswer(0, rx);
                 ackNumber++;
                 break;
 
             case NAK:
-                return;
+                return 0;
 
             default: {
                 QSleepThread::msleep(100);
                 enqNumber++;
             }
-            }
-
-        } catch (PortException e) {
-            enqNumber++;
-        }
-        if (ackNumber >= maxAckNumber) {
-            throw new DeviceException(SMFPTR_E_NOCONNECTION, "No connection");
         }
 
-        if (enqNumber >= maxEnqNumber) {
-            throw new DeviceException(SMFPTR_E_NOCONNECTION, "No connection");
+        if (ackNumber >= maxAckNumber)
+        {
+            logger->write("No connection");
+            return SMFPTR_E_NOCONNECTION;
+        }
+
+        if (enqNumber >= maxEnqNumber)
+        {
+            logger->write("No connection");
+            return SMFPTR_E_NOCONNECTION;
         }
     }
 }
 
-void PrinterProtocol1::disconnect()
+int PrinterProtocol1::disconnect()
 {
-    port->disconnect();
+    return port->disconnect();
 }
 
 int PrinterProtocol1::send(PrinterCommand& command)
 {
     int timeout = command.getTimeout();
     QByteArray tx;
+    QByteArray rx;
     tx = Frame::encode(command.encode());
-    QByteArray rx = send(tx, timeout);
+    int rc = send(tx, timeout, rx);
+    if (rc != 0) return rc;
     return command.decode(rx);
 }
 
-QByteArray PrinterProtocol1::send(QByteArray& data, int timeout)
+int PrinterProtocol1::send(QByteArray& tx, int timeout, QByteArray& rx)
 {
+    int rc = 0;
     int ackNumber = 0;
     int enqNumber = 0;
 
-    for (;;) {
-        try {
+    for (;;)
+    {
             port->setReadTimeout(byteTimeout);
-            port->writeByte(ENQ);
+            rc = port->writeByte(ENQ);
+            if (rc != 0){
+                enqNumber++;
+                continue;
+            }
 
-            int B = port->readByte();
+            uint8_t B;
+            rc = port->readByte(B);
+            if (rc != 0){
+                enqNumber++;
+                continue;
+            }
+
             switch (B) {
             case ACK:
-                readAnswer(timeout);
+                rc = readAnswer(timeout, rx);
                 ackNumber++;
                 break;
 
             case NAK:
-                writeCommand(data);
-                return readAnswer(timeout);
+                rc = writeCommand(tx);
+                if (rc != 0){
+                    enqNumber++;
+                    continue;
+                }
+                return readAnswer(timeout, rx);
 
             default:
                 QSleepThread::msleep(100);
                 enqNumber++;
             }
-        } catch (QException e) {
-            enqNumber++;
-        }
-        if (ackNumber >= maxAckNumber) {
-            throw new DeviceException(SMFPTR_E_NOCONNECTION, "No connection");
+        if (ackNumber >= maxAckNumber)
+        {
+            logger->write("No connection");
+            return SMFPTR_E_NOCONNECTION;
         }
 
         if (enqNumber >= maxEnqNumber) {
-            throw new DeviceException(SMFPTR_E_NOCONNECTION, "No connection");
+            logger->write("No connection");
+            return SMFPTR_E_NOCONNECTION;
         }
     }
+    return rc;
 }
 
-void PrinterProtocol1::writeCommand(QByteArray data)
+int PrinterProtocol1::writeCommand(QByteArray tx)
 {
+    int rc = 0;
     char nakCommandNumber = 0;
     while (true) {
-        port->writeBytes(data);
-        switch (port->readByte()) {
+        rc = port->writeBytes(tx);
+        if (rc != 0) return rc;
+
+        uint8_t B;
+        rc = port->readByte(B);
+        if (rc != 0) return rc;
+
+        switch (B) {
         case ACK:
-            return;
+            return rc;
         case NAK:
             nakCommandNumber++;
-            if (nakCommandNumber >= maxNakCommandNumber) {
-                throw new DeviceException(SMFPTR_E_NOCONNECTION,
-                    "nakCommandNumber >= maxNakCommandNumber");
+            if (nakCommandNumber >= maxNakCommandNumber)
+            {
+                logger->write("nakCommandNumber >= maxNakCommandNumber");
+                return SMFPTR_E_NOCONNECTION;
             }
         default:
-            return;
+            return rc;
         }
     }
 }
 
-QByteArray PrinterProtocol1::readAnswer(int timeout)
+int PrinterProtocol1::readAnswer(int timeout, QByteArray& rx)
 {
+    int rc = 0;
     int enqNumber = 0;
     for (;;) {
         port->setReadTimeout(timeout + byteTimeout);
         // STX
-        while (port->readByte() != STX) {
+        uint8_t B = 0;
+        while (B != STX)
+        {
+            rc = port->readByte(B);
+            if (rc != 0) return rc;
         }
         // set byte timeout
         port->setReadTimeout(byteTimeout);
         // data length
-        int dataLength = port->readByte() + 1;
+        rc = port->readByte(B);
+        if (rc != 0) return rc;
+        int dataLength = B + 1;
         // command data
-        QByteArray commandData = port->readBytes(dataLength);
+        rc = port->readBytes(dataLength, rx);
+        if (rc != 0) return rc;
         // check CRC
-        char crc = commandData.at(commandData.length() - 1);
-        commandData.chop(1);
-        if (Frame::getCrc(commandData) == crc) {
+        char crc = rx.at(rx.length() - 1);
+        rx.chop(1);
+        if (Frame::getCrc(rx) == crc) {
             port->writeByte(ACK);
-            return commandData;
+            return rc;
         } else {
-            port->writeByte(NAK);
-            port->writeByte(ENQ);
-            int B = port->readByte();
+            rc = port->writeByte(NAK);
+            if (rc != 0) return rc;
+
+            rc = port->writeByte(ENQ);
+            if (rc != 0) return rc;
+
+            rc = port->readByte(B);
+            if (rc != 0) return rc;
+
             switch (B) {
             case ACK:
                 break;
             case NAK:
-                return commandData;
+                return rc;
             default:
                 enqNumber++;
-                if (enqNumber >= maxEnqNumber) {
-                    throw new TextException("readAnswerError");
+                if (enqNumber >= maxEnqNumber)
+                {
+                    logger->write("readAnswerError");
+                    return SMFPTR_E_NOCONNECTION;
                 }
             }
         }

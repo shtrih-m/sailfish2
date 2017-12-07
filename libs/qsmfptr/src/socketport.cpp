@@ -23,9 +23,9 @@
 
 SocketPort::SocketPort(std::string address, int port, Logger* logger)
 {
-    (void)logger;
     this->address = address;
     this->port = port;
+    this->logger = logger;
     readTimeout = 1000;
     writeTimeout = 1000;
 }
@@ -36,7 +36,7 @@ SocketPort::~SocketPort()
 
 // retryTimeout
 
-bool SocketPort::connectToDevice(int timeout)
+int SocketPort::connectToDevice(int timeout)
 {
     long retryTimeout = 100; // retry after 100 ms
     disconnect();
@@ -46,27 +46,28 @@ bool SocketPort::connectToDevice(int timeout)
     while (true) {
         socket.connectToHost(address.c_str(), port);
         if (socket.waitForConnected(timeout))
-            return true;
+            return SMFPTR_OK;
         if (timer.elapsed() > timeout)
         {
             logger->write("Timeout connecting to host");
-            return false;
+            return SMFPTR_E_NOCONNECTION;
         }
         QSleepThread::msleep(retryTimeout);
         socket.abort();
     }
-    return true;
+    return SMFPTR_OK;
 }
 
-void SocketPort::disconnect()
+int SocketPort::disconnect()
 {
     if (socket.state() == QAbstractSocket::UnconnectedState)
-        return;
+        return SMFPTR_OK;
     socket.disconnectFromHost();
     if (socket.state() != QAbstractSocket::UnconnectedState) {
         if (!socket.waitForDisconnected(5000))
             socket.abort();
     }
+    return SMFPTR_OK;
 }
 
 void SocketPort::setReadTimeout(int value)
@@ -79,50 +80,55 @@ void SocketPort::setWriteTimeout(int value)
     writeTimeout = value;
 }
 
-void SocketPort::checkConnected()
+int SocketPort::readByte(uint8_t& B)
 {
-    if (socket.state() != QAbstractSocket::ConnectedState) {
-        throw new PortException("Not connected");
+    QByteArray rx;
+    int rc = readBytes(1, rx);
+    if (rc == 0){
+        B = rx[0];
     }
+    return rc;
 }
 
-uint8_t SocketPort::readByte()
+int SocketPort::readBytes(int count, QByteArray& rx)
 {
-    return readBytes(1)[0];
-}
+    int rc = connectToDevice();
+    if (rc != 0) return rc;
 
-QByteArray SocketPort::readBytes(int count)
-{
-    connectToDevice();
-    QByteArray packet;
     QElapsedTimer timer;
     timer.start();
     while (true) {
-        int n = count - packet.length();
-        packet.append(socket.read(n));
-        if (packet.length() >= count)
+        int n = count - rx.length();
+        rx.append(socket.read(n));
+        if (rx.length() >= count)
             break;
         socket.waitForReadyRead(readTimeout);
-        if (timer.elapsed() > readTimeout) {
-            qCritical() << "Timeout error";
-            throw new PortException("Timeout error");
+        if (timer.elapsed() > readTimeout)
+        {
+            logger->write("Timeout error");
+            return SMFPTR_E_NOCONNECTION;
         }
     }
-    return packet;
+    return SMFPTR_OK;
 }
 
-void SocketPort::writeByte(char data)
+int SocketPort::writeByte(char data)
 {
     QByteArray ba;
     ba.append(data);
-    writeBytes(ba);
+    return writeBytes(ba);
 }
 
-void SocketPort::writeBytes(const QByteArray& data)
+int SocketPort::writeBytes(const QByteArray& data)
 {
-    connectToDevice();
+    int rc = connectToDevice();
+    if (rc != 0) return rc;
+
     socket.write(data);
-    if (!socket.waitForBytesWritten(writeTimeout)) {
-        throw new PortException("Timeout writing");
+    if (!socket.waitForBytesWritten(writeTimeout))
+    {
+        logger->write("Timeout writing");
+        return SMFPTR_E_NOCONNECTION;
     }
+    return SMFPTR_OK;
 }

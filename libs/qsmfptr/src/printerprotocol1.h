@@ -1,6 +1,7 @@
 #ifndef PRINTERPROTOCOL1_H
 #define PRINTERPROTOCOL1_H
 
+#include "logger.h"
 #include "fiscalprinter.h"
 
 class Frame {
@@ -27,19 +28,21 @@ public:
 
 class PrinterProtocol1 : public PrinterProtocol {
 public:
-    PrinterProtocol1(PrinterPort* port);
+    PrinterProtocol1(PrinterPort* port, Logger* logger);
 
-    void connect();
-    void disconnect();
+    int connect();
+    int disconnect();
     int send(PrinterCommand& command);
 
 private:
+    Logger* logger;
     PrinterPort* port;
-    void sendENQ();
+
+    int sendENQ();
     int byteTimeout;
-    QByteArray readAnswer(int timeout);
-    QByteArray send(QByteArray& data, int timeout);
-    void writeCommand(QByteArray data);
+    int readAnswer(int timeout, QByteArray& rx);
+    int send(QByteArray& tx, int timeout, QByteArray& rx);
+    int writeCommand(QByteArray tx);
 };
 
 #endif // PRINTERPROTOCOL1_H

@@ -55,7 +55,7 @@ void BluetoothPort::socketStateChanged(QBluetoothSocket::SocketState state)
     logger->write(QString("stateChanged: %1").arg(state));
 }
 
-bool BluetoothPort::connectToDevice()
+int BluetoothPort::connectToDevice()
 {
     logger->write("connectToDevice");
 
@@ -74,18 +74,19 @@ bool BluetoothPort::connectToDevice()
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         if (timer.elapsed() > connectTimeout) {
             logger->write("Connect timeout error");
-            return false;
+            return SMFPTR_E_NOCONNECTION;
         }
     }
     logger->write("connectToDevice: OK");
-    return true;
+    return SMFPTR_OK;
 }
 
-void BluetoothPort::disconnect()
+int BluetoothPort::disconnect()
 {
     logger->write("disconnect()");
-    if (!connected) return;
+    if (!connected) return SMFPTR_OK;
     socket->disconnectFromService();
+    return SMFPTR_OK;
 }
 
 void BluetoothPort::setReadTimeout(int value)
@@ -105,16 +106,20 @@ void BluetoothPort::setConnectTimeout(int value)
     connectTimeout = value;
 }
 
-uint8_t BluetoothPort::readByte()
+int BluetoothPort::readByte(uint8_t& data)
 {
-    return readBytes(1)[0];
+    QByteArray packet;
+    int rc = readBytes(1, packet);
+    if (rc == 0){
+        data = packet[0];
+    }
+    return rc;
 }
 
-QByteArray BluetoothPort::readBytes(int count)
+int BluetoothPort::readBytes(int count, QByteArray& packet)
 {
     connectToDevice();
 
-    QByteArray packet;
     QElapsedTimer timer;
     timer.start();
     while (true) {
@@ -126,21 +131,23 @@ QByteArray BluetoothPort::readBytes(int count)
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         if (timer.elapsed() > readTimeout) {
             logger->write("Timeout error");
-            throw new PortException("Timeout error");
+            return SMFPTR_TIMEOUT_ERROR;
         }
     }
-    return packet;
+    return SMFPTR_OK;
 }
 
-void BluetoothPort::writeByte(char data)
+int BluetoothPort::writeByte(char data)
 {
     QByteArray ba;
     ba.append(data);
-    writeBytes(ba);
+    return writeBytes(ba);
 }
 
-void BluetoothPort::writeBytes(const QByteArray& data)
+int BluetoothPort::writeBytes(const QByteArray& data)
 {
-    connectToDevice();
+    int rc = connectToDevice();
+    if (rc != 0) return rc;
     socket->write(data);
+    return rc;
 }

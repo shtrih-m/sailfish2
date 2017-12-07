@@ -42,11 +42,12 @@ void BluetoothPort2::setAddress(QString value)
     address = value;
 }
 
-bool BluetoothPort2::connectToDevice()
+int BluetoothPort2::connectToDevice()
 {
 
+    int rc = 0;
     if (isConnected)
-        return true;
+        return rc;
 
     logger->write("connectToDevice");
     struct sockaddr_rc raddr;
@@ -63,7 +64,7 @@ bool BluetoothPort2::connectToDevice()
         sk = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
         if (sk < 0) {
             logger->write("Failed to create RFCOMM socket");
-            return false;
+            return SMFPTR_E_NOCONNECTION;
         }
 
         ::fcntl(sk, F_SETFL, O_NONBLOCK);
@@ -71,7 +72,7 @@ bool BluetoothPort2::connectToDevice()
         if (::connect(sk, (struct sockaddr*)&raddr, sizeof(raddr)) >= 0) {
             logger->write("Connected to RFCOMM socket!");
             isConnected = true;
-            return true;
+            return rc;
         }
 
         fd_set fdset;
@@ -87,23 +88,25 @@ bool BluetoothPort2::connectToDevice()
             if (so_error == 0) {
                 logger->write("Connected to RFCOMM socket!");
                 isConnected = true;
-                return true;
+                return rc;
             }
         }
         logger->write("Failed to connect RFCOMM socket");
         close(sk);
     }
-    return false;
+    return rc;
 }
 
-void BluetoothPort2::disconnect()
+int BluetoothPort2::disconnect()
 {
+    int rc = 0;
     logger->write("disconnect");
 
     if (!isConnected)
-        return;
+        return rc;
     close(sk);
     isConnected = false;
+    return rc;
 }
 
 void BluetoothPort2::setReadTimeout(int value)
@@ -124,11 +127,6 @@ void BluetoothPort2::setConnectTimeout(int value)
 void BluetoothPort2::setConnectRetries(int value)
 {
     connectRetries = value;
-}
-
-uint8_t BluetoothPort2::readByte()
-{
-    return readBytes(1)[0];
 }
 
 QString getErrorText(int code){
@@ -172,13 +170,20 @@ QString getErrorText(int code){
     return "Unknown";
 }
 
-
-QByteArray BluetoothPort2::readBytes(int count)
+int BluetoothPort2::readByte(uint8_t& data)
 {
-    logger->write("readBytes");
-
-    connectToDevice();
     QByteArray packet;
+    int rc = readBytes(1, packet);
+    if (rc == 0){
+        data = packet[0];
+    }
+    return rc;
+}
+
+int BluetoothPort2::readBytes(int count, QByteArray& packet)
+{
+    int rc = connectToDevice();
+    if (rc != 0) return rc;
 
     char buf[count];
     while (true)
@@ -190,14 +195,14 @@ QByteArray BluetoothPort2::readBytes(int count)
         {
             disconnect();
             logger->write(getErrorText(errno));
-            throw new PortException(getErrorText(errno));
+            return SMFPTR_TIMEOUT_ERROR;
         }
         packet.append(buf, n);
         if (packet.length() >= count){
             break;
         }
     }
-    return packet;
+    return SMFPTR_OK;
 }
 
 void BluetoothPort2::waitRead()
@@ -218,21 +223,25 @@ void BluetoothPort2::waitRead()
     }
 }
 
-void BluetoothPort2::writeByte(char data)
+int BluetoothPort2::writeByte(char data)
 {
     QByteArray ba;
     ba.append(data);
-    writeBytes(ba);
+    return writeBytes(ba);
 }
 
-void BluetoothPort2::writeBytes(const QByteArray& data)
+int BluetoothPort2::writeBytes(const QByteArray& data)
 {
-    connectToDevice();
-    int rc = write(sk, data.data(), data.length());
+    int rc = connectToDevice();
+    if (rc != 0) return rc;
+
+    rc = write(sk, data.data(), data.length());
     if (rc < 0){
         disconnect();
         logger->write("ERROR writing to socket");
+        return SMFPTR_E_NOCONNECTION;
     }
+    return SMFPTR_OK;
 }
 
 QString BluetoothPort2::findDevice()

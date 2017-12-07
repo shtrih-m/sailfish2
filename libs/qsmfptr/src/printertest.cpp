@@ -53,11 +53,17 @@ void PrinterTest::execute()
 {
     qDebug("PrinterTest::execute");
 
+    connectPrinter();
 
-    JournalPrinter journal("journal.txt");
-    journal.show(journal.readDoc(28));
+    printSaleReceipt();
+    waitForDocuments();
+
+    disconnectPrinter();
+
 
 /*
+    JournalPrinter journal("journal.txt");
+    journal.show(journal.readDoc(28));
     //journal.show(journal.readAll());
     //journal.show(journal.readDay(7));
     //journal.show(journal.readDocRange(21, 22));

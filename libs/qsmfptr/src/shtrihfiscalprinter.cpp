@@ -503,42 +503,39 @@ int ShtrihFiscalPrinter::writeBlock(QByteArray block)
     int rc = 0;
 
     lock();
-    try
+
+    FSStartWriteBuffer startCommand;
+    startCommand.size = block.size();
+    rc = fsStartWriteBuffer(startCommand);
+    if (failed(rc)) {
+        unlock();
+        return rc;
+    }
+
+    int blockSize = 64;
+    if (startCommand.blockSize > 0){
+        blockSize = startCommand.blockSize;
+    }
+    int count = (block.size() + blockSize -1)/blockSize;
+    for (int i=0;i<count;i++)
     {
-        FSStartWriteBuffer startCommand;
-        startCommand.size = block.size();
-        int rc = fsStartWriteBuffer(startCommand);
+        int bsize = blockSize;
+        if (bsize > block.size()){
+            bsize = block.size();
+        }
+
+        FSWriteBuffer dataBlock;
+        dataBlock.block = block.left(bsize);
+        dataBlock.offset = i * blockSize;
+        rc = fsWriteBuffer(dataBlock);
         if (failed(rc)) {
+            logger->write("writeBlock failed");
             unlock();
             return rc;
         }
-
-        int blockSize = 64;
-        if (startCommand.blockSize > 0){
-            blockSize = startCommand.blockSize;
-        }
-        int count = (block.size() + blockSize -1)/blockSize;
-        for (int i=0;i<count;i++)
-        {
-            int bsize = blockSize;
-            if (bsize > block.size()){
-                bsize = block.size();
-            }
-
-            FSWriteBuffer dataBlock;
-            dataBlock.block = block.left(bsize);
-            dataBlock.offset = i * blockSize;
-            rc = fsWriteBuffer(dataBlock);
-            if (failed(rc)) return rc;
-            block.remove(0, bsize);
-        }
-        unlock();
+        block.remove(0, bsize);
     }
-    catch(QException exception)
-    {
-        unlock();
-        exception.raise();
-    }
+    unlock();
     logger->write("writeBlock: OK");
     return rc;
 }
@@ -546,54 +543,46 @@ int ShtrihFiscalPrinter::writeBlock(QByteArray block)
 bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
 {
     logger->write("readBlock");
-
     lock();
-    try{
-        FSBufferStatus bufferStatus;
-        int rc = fsReadBufferStatus(bufferStatus);
+
+    FSBufferStatus bufferStatus;
+    int rc = fsReadBufferStatus(bufferStatus);
+    if (failed(rc)) {
+        unlock();
+        return false;
+    }
+
+    logger->write(QString("bufferStatus.dataSize: %1").arg(bufferStatus.dataSize));
+
+    if (bufferStatus.dataSize <= 0) {
+        unlock();
+        return false;
+    }
+
+    int blockSize = 64;
+    if ((bufferStatus.blockSize > 0)&&(bufferStatus.blockSize < 240)){
+        blockSize = bufferStatus.blockSize;
+    }
+    int bytesToRead = bufferStatus.dataSize;
+    int blockCount = (bufferStatus.dataSize + blockSize-1)/blockSize;
+    for (int i=0;i<blockCount;i++)
+    {
+        FSBufferBlock dataBlock;
+        dataBlock.offset = i * blockSize;
+        dataBlock.size = blockSize;
+        if (bytesToRead < blockSize){
+            dataBlock.size = bytesToRead;
+        }
+        rc = fsReadBufferBlock(dataBlock);
         if (failed(rc)) {
             unlock();
             return false;
         }
 
-        logger->write(QString("bufferStatus.dataSize: %1").arg(bufferStatus.dataSize));
-
-        if (bufferStatus.dataSize <= 0) {
-            unlock();
-            return false;
-        }
-
-        int blockSize = 64;
-        if ((bufferStatus.blockSize > 0)&&(bufferStatus.blockSize < 240)){
-            blockSize = bufferStatus.blockSize;
-        }
-        int bytesToRead = bufferStatus.dataSize;
-        int blockCount = (bufferStatus.dataSize + blockSize-1)/blockSize;
-        for (int i=0;i<blockCount;i++)
-        {
-            FSBufferBlock dataBlock;
-            dataBlock.offset = i * blockSize;
-            dataBlock.size = blockSize;
-            if (bytesToRead < blockSize){
-                dataBlock.size = bytesToRead;
-            }
-            rc = fsReadBufferBlock(dataBlock);
-            if (failed(rc)) {
-                unlock();
-                return false;
-            }
-
-            block.append(dataBlock.data);
-            bytesToRead -= blockSize;
-        }
-        unlock();
+        block.append(dataBlock.data);
+        bytesToRead -= blockSize;
     }
-    catch(QException exception)
-    {
-        unlock();
-        logger->write("readBlock failed");
-        return false;
-    }
+    unlock();
     logger->write("readBlock: OK");
     return true;
 }

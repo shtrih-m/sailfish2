@@ -25,15 +25,14 @@ public:
     SocketPort(std::string address, int port, Logger* logger);
     virtual ~SocketPort();
 
-    bool connectToDevice(int timeout = 0);
-    void disconnect();
-    uint8_t readByte();
+    int connectToDevice(int timeout = 0);
+    int disconnect();
+    int writeByte(char data);
+    int readByte(uint8_t& C);
+    int writeBytes(const QByteArray& tx);
+    int readBytes(int count, QByteArray& rx);
     void setReadTimeout(int value);
     void setWriteTimeout(int value);
-    QByteArray readBytes(int count);
-    void writeByte(char data);
-    void writeBytes(const QByteArray& data);
-
 private:
     Logger* logger;
     std::string address;
@@ -41,7 +40,6 @@ private:
     int readTimeout;
     int writeTimeout;
     QTcpSocket socket;
-    void checkConnected();
 };
 
 #endif /* SOCKETPORT_H */
