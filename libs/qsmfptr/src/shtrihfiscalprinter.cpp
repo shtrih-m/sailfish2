@@ -6937,27 +6937,37 @@ int ShtrihFiscalPrinter::printLines(QStringList lines)
 
 void ShtrihFiscalPrinter::jrnPrintAll()
 {
+    getJournal()->reset();
     printLines(getJournal()->readAll());
+    getJournal()->reset();
 }
 
 void ShtrihFiscalPrinter::jrnPrintCurrentDay()
 {
+    getJournal()->reset();
     jrnPrintDay(readDayNumber() + 1);
+    getJournal()->reset();
 }
 
 void ShtrihFiscalPrinter::jrnPrintDay(int dayNumber)
 {
+    getJournal()->reset();
     printLines(getJournal()->readDay(dayNumber));
+    getJournal()->reset();
 }
 
 void ShtrihFiscalPrinter::jrnPrintDoc(int docNumber)
 {
+    getJournal()->reset();
     printLines(getJournal()->readDoc(docNumber));
+    getJournal()->reset();
 }
 
 void ShtrihFiscalPrinter::jrnPrintDocRange(int N1, int N2)
 {
+    getJournal()->reset();
     printLines(getJournal()->readDocRange(N1, N2));
+    getJournal()->reset();
 }
 
 QString ShtrihFiscalPrinter::readParameter(int ParamId)
