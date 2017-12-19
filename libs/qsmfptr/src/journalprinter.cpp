@@ -10,6 +10,15 @@
 JournalPrinter::JournalPrinter(QString afileName)
 {
     fileName = afileName;
+    docNumber = FPDocNumber;
+}
+
+DocNumber JournalPrinter::getDocNumber(){
+    return docNumber;
+}
+
+void JournalPrinter::setDocNumber(DocNumber value){
+    docNumber = value;
 }
 
 QString JournalPrinter::getFileName(){
@@ -93,6 +102,26 @@ QStringList JournalPrinter::readAll()
 }
 
 int JournalPrinter::getDocumentNumber(QString line)
+{
+    if (FSDocNumber == docNumber){
+        return getFSDocumentNumber(line);
+    } else{
+        return getFPDocumentNumber(line);
+    }
+}
+
+int JournalPrinter::getFPDocumentNumber(QString line)
+{
+    if (line.contains("#"))
+    {
+        int startIndex = line.indexOf("#") + 1;
+        QString number = line.right(line.length()-startIndex);
+        return number.toInt();
+    }
+    return -1;
+}
+
+int JournalPrinter::getFSDocumentNumber(QString line)
 {
     if (line.contains("ФД:"))
     {

@@ -62,14 +62,27 @@ void PrinterTest::execute()
     qDebug("PrinterTest::execute");
 
     JournalPrinter journal("journal.txt");
-    journal.deleteFile();
 
-    connectPrinter();
-    //testHeaderTrailer();
-    testHeaderEnabled();
-    disconnectPrinter();
+    qDebug("Read FS document 21");
+    journal.setDocNumber(FSDocNumber);
+    journal.show(journal.readDoc(21));
 
-    journal.show(journal.readAll());
+    qDebug("Read FS document 22");
+    journal.setDocNumber(FSDocNumber);
+    journal.show(journal.readDoc(22));
+
+    qDebug("Read FP document 24");
+    journal.setDocNumber(FPDocNumber);
+    journal.show(journal.readDoc(24));
+
+    qDebug("Read FP document 25");
+    journal.setDocNumber(FPDocNumber);
+    journal.show(journal.readDoc(25));
+
+    // connectPrinter();
+    // testHeaderTrailer();
+    // testHeaderEnabled();
+    // disconnectPrinter();
 }
 
 /*
