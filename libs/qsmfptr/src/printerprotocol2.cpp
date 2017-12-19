@@ -142,6 +142,7 @@ int PrinterProtocol2::synchronizeFrames(int timeout)
         frame.incNumber();
         break;
     }
+    return rc;
 }
 
 int PrinterProtocol2::send(PrinterCommand& command)

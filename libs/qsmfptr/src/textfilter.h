@@ -98,8 +98,6 @@ private:
     uint8_t operatorNumber;
     QString paymentNames[4];
     ShtrihFiscalPrinter* printer;
-    QStringList header;
-    QStringList trailer;
     QVector<PrinterOperator> printerOperators;
     QString docNames[4];
     QStringList lines;
@@ -113,6 +111,7 @@ private:
     void beginDocument(bool isDayClose = false);
     void addReceiptHeader(bool isDayClose = false);
     void add(QString text);
+    void add(QStringList list);
     void addEJLine(QString s);
     void addXZReport(XReport report);
     void add(QString s1, QString s2);
@@ -134,6 +133,7 @@ private:
     void addDocMac();
 public:
     TextFilter(ShtrihFiscalPrinter* aprinter);
+    ~TextFilter(){}
 
     QString getFileName();
     void setFileName(QString fileName);
@@ -150,6 +150,8 @@ public:
     void printHeader(uint8_t event, PasswordCommand& data);
     void printDocEnd(uint8_t event, PrintDocEndCommand& data);
     void printSale(uint8_t event, ReceiptItemCommand& data);
+    void printSale(uint8_t event, FSSale& data);
+    void printSale(uint8_t event, FSSale2& data);
     void printBuy(uint8_t event, ReceiptItemCommand& data);
     void printRetSale(uint8_t event, ReceiptItemCommand& data);
     void printRetBuy(uint8_t event, ReceiptItemCommand& data);
@@ -165,6 +167,7 @@ public:
     void printCopy(uint8_t event, PasswordCommand& data);
     void openReceipt(uint8_t event, OpenReceiptCommand& data);
     void openDay(uint8_t event, PasswordCommand& data);
+    void writeParameter(uint8_t event, int ParamId, QString value);
 };
 
 #endif // TEXTFILTER_H

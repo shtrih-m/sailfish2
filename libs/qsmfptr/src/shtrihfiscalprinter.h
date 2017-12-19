@@ -34,6 +34,7 @@
 #define FPTR_PARAMETER_SERIAL_NUMBER        1
 #define FPTR_PARAMETER_FISCAL_ID            2
 #define FPTR_PARAMETER_FS_SERIAL_NUMBER     3
+#define FPTR_PARAMETER_HEADER_ENABLED       4
 
 // ////////////////////////////////////////////////////////////////////////
 // Field types
@@ -1364,6 +1365,7 @@ struct ModelParameters {
 class PrinterField
 {
 private:
+    int Id;
     int row;
     QString value;
     PrinterFieldInfo info;
@@ -1377,6 +1379,14 @@ public:
 
     void setInfo(PrinterFieldInfo info){
         this->info = info;
+    }
+
+    void setId(int value){
+        Id = value;
+    }
+
+    int getId(){
+        return Id;
     }
 
     int getRow(){
@@ -1607,6 +1617,8 @@ public:
     virtual void printHeader(uint8_t event, PasswordCommand& data)=0;
     virtual void printDocEnd(uint8_t event, PrintDocEndCommand& data)=0;
     virtual void printSale(uint8_t event, ReceiptItemCommand& data)=0;
+    virtual void printSale(uint8_t event, FSSale& data)=0;
+    virtual void printSale(uint8_t event, FSSale2& data)=0;
     virtual void printBuy(uint8_t event, ReceiptItemCommand& data)=0;
     virtual void printRetSale(uint8_t event, ReceiptItemCommand& data)=0;
     virtual void printRetBuy(uint8_t event, ReceiptItemCommand& data)=0;
@@ -1656,12 +1668,15 @@ public:
     virtual void slipPrintItem(uint8_t event, SlipPrintItemCommand& data)=0;
     virtual void loadGraphics3(uint8_t event, LoadGraphics3Command& data)=0;
     virtual void printGraphics3(uint8_t event, PrintGraphics3Command& data)=0;
+    virtual void writeParameter(uint8_t event, int ParamId, QString value)=0;
+    virtual void writeTableStr(uint8_t event, int table, int row, int field, QString value)=0;
 };
 
 class PrinterFilter: public IPrinterFilter
 {
 public:
     PrinterFilter(){}
+    virtual ~PrinterFilter(){}
 
     virtual void startDump(uint8_t event, StartDumpCommand& data)
     {
@@ -1869,6 +1884,16 @@ public:
     }
 
     virtual void printSale(uint8_t event, ReceiptItemCommand& data)    {
+        (void)event;
+        (void)data;
+    }
+
+    virtual void printSale(uint8_t event, FSSale& data){
+        (void)event;
+        (void)data;
+    }
+
+    virtual void printSale(uint8_t event, FSSale2& data){
         (void)event;
         (void)data;
     }
@@ -2113,6 +2138,19 @@ public:
         (void)data;
     }
 
+    virtual void writeParameter(uint8_t event, int ParamId, QString value)  {
+        (void)event;
+        (void)ParamId;
+        (void)value;
+    }
+    virtual void writeTableStr(uint8_t event, int table, int row,
+        int field, QString value){
+        (void)event;
+        (void)table;
+        (void)row;
+        (void)field;
+        (void)value;
+    }
 };
 
 class ShtrihFiscalPrinter : public QObject {
@@ -2291,12 +2329,15 @@ public:
     uint16_t readOperationRegister(uint8_t number);
     int readTableInt(int table, int row, int field);
     QString readTableStr(int table, int row, int field);
+    int writeTableStr(int table, int row, int field, QString value);
     int readTable(int table, int row, int field, QString text);
     void check(int resultCode);
     QStringList readHeader();
     QStringList readTrailer();
     QString readPaymentName(int number);
     bool readTrailerEnabled();
+    QStringList getHeader();
+    QStringList getTrailer();
 
     int printEJDepartmentReportOnDates(PrintEJDepartmentReportOnDates& data);
     int printEJDepartmentReportOnDays(PrintEJDepartmentReportOnDays& data);
@@ -2397,6 +2438,7 @@ public:
     void jrnPrintDoc(int docNumber);
     void jrnPrintDocRange(int N1, int N2);
     QString readParameter(int ParamId);
+    int writeParameter(int ParamId, QString value);
 
     bool canRepeatCommand(uint16_t commandCode);
     uint32_t getDocumentMac(FSFindDocument doc);
@@ -2447,6 +2489,8 @@ private:
     QString regNumber;
     QString serialNumber;
     QString fsSerialNumber;
+    QStringList header;
+    QStringList trailer;
 public:
     int sleepTimeInMs;
     bool userNameEnabled;

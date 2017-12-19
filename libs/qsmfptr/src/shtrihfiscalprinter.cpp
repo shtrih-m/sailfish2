@@ -1183,6 +1183,46 @@ int ShtrihFiscalPrinter::writeTable(TableValueCommand& data)
     return data.resultCode;
 }
 
+int ShtrihFiscalPrinter::writeTableStr(int table, int row,
+    int field, QString value)
+{
+    logger->write(QString("writeTable(%1, %2, %3, %4)").arg(table).arg(row).arg(field).arg(value));
+    filter->writeTableStr(EVENT_BEFORE, table, row, field, value);
+
+
+    PrinterField printerField;
+    int rc = getPrinterField(table, row, field, printerField);
+    if (rc == 0)
+    {
+        printerField.setValue(value);
+
+        TableValueCommand command;
+        command.table = table;
+        command.row = row;
+        command.field = field;
+        command.value = printerField.getBinary();
+        rc = writeTable(command);
+    }
+    if (rc == 0)
+    {
+        filter->writeTableStr(EVENT_AFTER, table, row, field, value);
+        if ((table == SMFP_TABLE_TEXT)&&(field == 1))
+        {
+            int index = row - numHeaderRow;
+            if ((index >= 0)&&(index < getHeader().size()))
+            {
+                getHeader().replace(index, value);
+            }
+            index = row - numTrailerRow;
+            if ((index >= 0)&&(index < getTrailer().size()))
+            {
+                getTrailer().replace(index, value);
+            }
+        }
+    }
+    return rc;
+}
+
 /*****************************************************************************
 Чтение таблицы
 Команда:	1FH. Длина сообщения: 9 байт.
@@ -5587,6 +5627,22 @@ int ShtrihFiscalPrinter::readTableInt(int table, int row, int field)
     return text.toInt();
 }
 
+QStringList ShtrihFiscalPrinter::getHeader()
+{
+    if (header.size() == 0){
+        header = readHeader();
+    }
+    return header;
+}
+
+QStringList ShtrihFiscalPrinter::getTrailer()
+{
+    if (trailer.size() == 0){
+        trailer = readTrailer();
+    }
+    return trailer;
+}
+
 QStringList ShtrihFiscalPrinter::readHeader(){
 
     QStringList header;
@@ -6620,6 +6676,13 @@ int ShtrihFiscalPrinter::fsCloseDay(FSCloseDay& data)
 int ShtrihFiscalPrinter::fsPrintSale(FSSale& data)
 {
     logger->write("fsPrintSale");
+
+    filter->printSale(EVENT_BEFORE, data);
+
+    // Open fiscal day for fiscal storage
+    int rc = openFiscalDay();
+    if (failed(rc)) return rc;
+
     PrinterCommand command(0xFF44);
     command.write(sysPassword, 4);
     command.write8(data.operation);
@@ -6632,7 +6695,11 @@ int ShtrihFiscalPrinter::fsPrintSale(FSSale& data)
     command.write(data.tax, 1);
     command.write(data.barcode, 5);
     command.write(data.text);
-    return send(command);
+    rc = send(command);
+    if (succeeded(rc)){
+        filter->printSale(EVENT_AFTER, data);
+    }
+    return rc;
 }
 
 /***************************************************************************
@@ -6724,6 +6791,12 @@ int ShtrihFiscalPrinter::fsCloseReceipt(FSCloseReceipt& data)
 int ShtrihFiscalPrinter::fsPrintSale2(FSSale2& data)
 {
     logger->write("fsPrintSale2");
+    filter->printSale(EVENT_BEFORE, data);
+
+    // Open fiscal day for fiscal storage
+    int rc = openFiscalDay();
+    if (failed(rc)) return rc;
+
     PrinterCommand command(0xFF46);
     command.write(sysPassword, 4);
     command.write8(data.operation);
@@ -6735,7 +6808,11 @@ int ShtrihFiscalPrinter::fsPrintSale2(FSSale2& data)
     command.write(data.paymentType, 1);
     command.write(data.paymentMode, 1);
     command.write(data.text);
-    return send(command);
+    rc = send(command);
+    if (succeeded(rc)){
+        filter->printSale(EVENT_AFTER, data);
+    }
+    return rc;
 }
 
 /***************************************************************************
@@ -7016,9 +7093,41 @@ QString ShtrihFiscalPrinter::readParameter(int ParamId)
                 fsSerialNumber = readTableStr(18,1,4);
             }
         }
-        return fsSerialNumber;
+    case FPTR_PARAMETER_HEADER_ENABLED:
+    {
+        if (isShtrihMobile()){
+            return readTableStr(1,1,28);
+        } else{
+            return readTableStr(1,1,39);
+        }
+    }
+
     default: return "";
     }
+}
+
+int ShtrihFiscalPrinter::writeParameter(int ParamId, QString value)
+{
+    filter->writeParameter(EVENT_BEFORE, ParamId, value);
+
+    int rc = 0;
+    switch (ParamId)
+    {
+    case FPTR_PARAMETER_HEADER_ENABLED:
+    {
+        if (isShtrihMobile()){
+            rc = writeTableStr(1,1,28,value);
+        } else{
+            rc = writeTableStr(1,1,39,value);
+        }
+    }
+
+    default: rc = SMFPTR_E_INVALID_PARAM_ID;
+    }
+    if (rc == 0){
+        filter->writeParameter(EVENT_AFTER, ParamId, value);
+    }
+    return rc;
 }
 
 FSDocument1 ShtrihFiscalPrinter::decodeDocument1(QByteArray data)
@@ -7289,4 +7398,3 @@ bool ShtrihFiscalPrinter::canRepeatCommand(uint16_t commandCode)
   }
   return false;
 }
-

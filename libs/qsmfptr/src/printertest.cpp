@@ -49,17 +49,28 @@ PrinterTest::~PrinterTest()
     delete logger;
 }
 
+void PrinterTest::show(QStringList lines)
+{
+    for (int i=0;i<lines.length();i++)
+    {
+        qDebug() << "SHOW: " << lines.at(i);
+    }
+}
+
 void PrinterTest::execute()
 {
     qDebug("PrinterTest::execute");
 
+    JournalPrinter journal("journal.txt");
+    journal.deleteFile();
+
     connectPrinter();
-
-    printSaleReceipt();
-    waitForDocuments();
-
+    //testHeaderTrailer();
+    testHeaderEnabled();
     disconnectPrinter();
 
+    journal.show(journal.readAll());
+}
 
 /*
     JournalPrinter journal("journal.txt");
@@ -97,6 +108,38 @@ void PrinterTest::execute()
     //printer->jrnPrintDocRange(107, 109);
     //disconnectPrinter();
     */
+
+void PrinterTest::testHeaderEnabled()
+{
+    printer->writeParameter(FPTR_PARAMETER_HEADER_ENABLED, "0");
+    PasswordCommand command;
+    printer->printHeader(command);
+    printSaleReceipt();
+
+    printer->writeParameter(FPTR_PARAMETER_HEADER_ENABLED, "1");
+    printSaleReceipt();
+}
+
+void PrinterTest::testHeaderTrailer()
+{
+    qDebug("Header1: ");
+    show(printer->readHeader());
+    qDebug("Trailer1: ");
+    show(printer->readTrailer());
+
+    printer->writeTableStr(4, 11, 1, "Header line 1");
+    printer->writeTableStr(4, 12, 1, "Header line 2");
+    printer->writeTableStr(4, 13, 1, "Header line 3");
+    printer->writeTableStr(4, 14, 1, "Header line 4");
+    printer->writeTableStr(4, 1, 1, "Trailer line 1");
+    printer->writeTableStr(4, 2, 1, "Trailer line 2");
+    printer->writeTableStr(4, 3, 1, "Trailer line 3");
+    qDebug("Header2: ");
+    show(printer->readHeader());
+    qDebug("Trailer2: ");
+    show(printer->readTrailer());
+
+    qDebug() << "HeaderEnabled: " << printer->readParameter(FPTR_PARAMETER_HEADER_ENABLED);
 }
 
 void PrinterTest::deleteLogFile(){
@@ -384,7 +427,7 @@ void PrinterTest::testSprintf()
 void PrinterTest::connectPrinter()
 {
     printer->connectDevice();
-    //qDebug("Printer connected!");
+    qDebug("Printer connected!");
 }
 
 void PrinterTest::disconnectPrinter()
@@ -764,12 +807,6 @@ void PrinterTest::printSaleReceipt()
     check(printer->waitForPrinting());
     // Item 1
     QString itemText = "Line1";
-    //QString itemText = "Line1\r\n";
-    //itemText += "Line2\r";
-    //itemText += "Line3\n";
-    //itemText += "Line401234567890123456789012345678901234567890123456789";
-
-
     ReceiptItemCommand itemCommand;
     itemCommand.quantity = 1000;
     itemCommand.price = 123456;
@@ -781,9 +818,6 @@ void PrinterTest::printSaleReceipt()
     itemCommand.text = itemText;
     check(printer->printSale(itemCommand));
     check(printer->waitForPrinting());
-    // addTag
-    printer->fsWriteTag(1008, "89168191324");
-    printer->fsWriteTag(1009, "835683746574");
     // Close receipt
     CloseReceiptCommand closeCommand;
     closeCommand.amount1 = 123456;

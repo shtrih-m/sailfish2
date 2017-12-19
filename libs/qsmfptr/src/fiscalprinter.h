@@ -7,10 +7,13 @@
 #include <QObject>
 #include <QString>
 
-const int SMFPTR_E_NOCONNECTION = -1;
-const int SMFPTR_E_LARGEWIDTH = -2;
-const int SMFPTR_E_LARGEHEIGHT = -3;
-const int SMFPTR_E_NOGRAPHICS = -4;
+const int SMFPTR_E_NOCONNECTION     = -1;
+const int SMFPTR_E_LARGEWIDTH       = -2;
+const int SMFPTR_E_LARGEHEIGHT      = -3;
+const int SMFPTR_E_NOGRAPHICS       = -4;
+const int SMFPTR_E_INVALID_PARAM_ID = -5;
+
+
 
 class TextException : public QException {
 public:

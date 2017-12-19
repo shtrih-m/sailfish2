@@ -41,13 +41,23 @@ QString getTaxLetter(int tax)
     return "";
 }
 
-QString getTaxData(int tax1, int tax2, int tax3, int tax4)
+QString getTaxText(int tax1, int tax2, int tax3, int tax4)
 {
     QString result = "";
     result += getTaxLetter(tax1);
     result += getTaxLetter(tax2);
     result += getTaxLetter(tax3);
     result += getTaxLetter(tax4);
+    if (!result.isEmpty()){
+        result = "_" + result;
+    }
+    return result;
+}
+
+QString getTaxText(int tax)
+{
+    QString result = "";
+    result += getTaxLetter(tax);
     if (!result.isEmpty()){
         result = "_" + result;
     }
@@ -111,8 +121,6 @@ void TextFilter::connect()
     {
         paymentNames[i] = printer->readPaymentName(i+1);
      }
-    header = printer->readHeader();
-    trailer = printer->readTrailer();
     connected = true;
 }
 
@@ -290,7 +298,7 @@ void TextFilter::printReceiptItem(ReceiptItemCommand& data)
     add("", line);
 
     line = summToStr(data.price, data.quantity) +
-        getTaxData(data.tax1, data.tax2, data.tax3, data.tax4);
+        getTaxText(data.tax1, data.tax2, data.tax3, data.tax4);
     add(buffer.sprintf("%d", data.department), line);
 }
 
@@ -300,6 +308,40 @@ void TextFilter::printSale(uint8_t event, ReceiptItemCommand& data)
         operatorNumber = data.operatorNumber;
         openReceipt2(SMFP_RECTYPE_SALE);
         printReceiptItem(data);
+    }
+}
+
+void TextFilter::printSale(uint8_t event, FSSale& data)
+{
+    if (event == EVENT_AFTER){
+        openReceipt2(SMFP_RECTYPE_SALE);
+
+        add(data.text);
+
+        QString line = quantityToStr(data.quantity) + " X " +
+            amountToStr(data.price);
+        add("", line);
+
+        line = summToStr(data.price, data.quantity) +
+            getTaxText(data.tax);
+        add(buffer.sprintf("%d", data.department), line);
+    }
+}
+
+void TextFilter::printSale(uint8_t event, FSSale2& data)
+{
+    if (event == EVENT_AFTER){
+        openReceipt2(SMFP_RECTYPE_SALE);
+
+        add(data.text);
+
+        QString line = quantityToStr(data.quantity) + " X " +
+            amountToStr(data.price);
+        add("", line);
+
+        line = summToStr(data.price, data.quantity) +
+            getTaxText(data.tax);
+        add(buffer.sprintf("%d", data.department), line);
     }
 }
 
@@ -371,7 +413,7 @@ void TextFilter::closeReceipt(uint8_t event, CloseReceiptCommand& data)
             long discountAmount = round(receiptTotal * data.discount / 100.0);
             QString line = QString(SDiscountText) + " " + amountToStr(data.discount) + "%";
             add(line, summToStr(discountAmount)
-                    + getTaxData(data.tax1, data.tax2, data.tax3, data.tax4));
+                    + getTaxText(data.tax1, data.tax2, data.tax3, data.tax4));
             receiptTotal = receiptTotal - discountAmount;
         }
         // TOTAL =123.34
@@ -467,23 +509,31 @@ void TextFilter::openReceipt(uint8_t event, OpenReceiptCommand& data){
     }
 }
 
-void TextFilter::addHeader(){
-    for (int i = 0; i < header.size(); i++) {
-        add(header.at(i));
+void TextFilter::add(QStringList list)
+{
+    for (int i = 0; i < list.size(); i++) {
+        add(list.at(i));
     }
+}
+
+void TextFilter::addHeader()
+{
+    add(printer->getHeader());
 }
 
 void TextFilter::addTrailer()
 {
-    for (int i = 0; i < trailer.size(); i++) {
-        add(trailer.at(i));
-    }
+    add(printer->getTrailer());
 }
 
 void TextFilter::beginDocument(bool isDayClose)
 {
     connect();
-    addHeader();
+
+    bool headerEnabled = printer->readParameter(FPTR_PARAMETER_HEADER_ENABLED).compare("1") == 0;
+    if (headerEnabled){
+        addHeader();
+    }
     addReceiptHeader(isDayClose);
 }
 
@@ -738,4 +788,6 @@ void TextFilter::addEJLine(QString s)
     add("        " + s);
 }
 
-
+void TextFilter::writeParameter(uint8_t event, int ParamId, QString value)
+{
+}
