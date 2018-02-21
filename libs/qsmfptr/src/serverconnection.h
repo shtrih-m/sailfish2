@@ -24,7 +24,6 @@ private:
     ServerParams params;
 
     void waitRead();
-    QString getErrorText(int code);
 public:
     ServerConnection(Logger* logger);
 
