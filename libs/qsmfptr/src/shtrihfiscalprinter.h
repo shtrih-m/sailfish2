@@ -2453,6 +2453,7 @@ private:
     Logger* logger;
     QMutex* mutex;
     TlvTags tlvTags;
+    QThread* thread;
     IPrinterFilter* filter;
     PrinterProtocol* protocol;
     std::vector<PrinterImage> images;

@@ -149,6 +149,7 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     userName = "";
     sleepTimeInMs = 1000;
     connected = false;
+    thread = NULL;
 
     filter = new PrinterFilter();
     journal = new JournalPrinter("journal.txt");
@@ -391,39 +392,51 @@ bool ShtrihFiscalPrinter::isShtrihMobile(){
 
 void ShtrihFiscalPrinter::disconnectDevice()
 {
-    stopFDOThread();
-    protocol->disconnect();
+    if (connected){
+        connected = false;
+        stopFDOThread();
+        protocol->disconnect();
+    }
 }
 
 void ShtrihFiscalPrinter::startFDOThread()
 {
-    logger->write("startFDOThread");
-    // read FDO server parameters
-    serverParams.address = readTableStr(15, 1, 1);
-    serverParams.port = readTableStr(15, 1, 2).toInt();
-    pollInterval = readTableStr(15, 1, 3).toInt()*1000;
-    serverParams.connectTimeout = 20000;
-    serverParams.readTimeout = 100000;
-    serverParams.writeTimeout = 20000;
-    serverParams.connectRetries = 1;
+    if (thread == NULL)
+    {
+        logger->write("startFDOThread");
+        // read FDO server parameters
+        serverParams.address = readTableStr(15, 1, 1);
+        serverParams.port = readTableStr(15, 1, 2).toInt();
+        pollInterval = readTableStr(15, 1, 3).toInt()*1000;
+        serverParams.connectTimeout = 20000;
+        serverParams.readTimeout = 100000;
+        serverParams.writeTimeout = 20000;
+        serverParams.connectRetries = 1;
 
-    logger->write(QString("params.address: %1").arg(serverParams.address));
-    logger->write(QString("params.port: %1").arg(serverParams.port));
-    logger->write(QString("params.readTimeout: %1").arg(serverParams.readTimeout));
-    logger->write(QString("params.writeTimeout: %1").arg(serverParams.writeTimeout));
-    logger->write(QString("params.connectTimeout: %1").arg(serverParams.connectTimeout));
+        logger->write(QString("params.address: %1").arg(serverParams.address));
+        logger->write(QString("params.port: %1").arg(serverParams.port));
+        logger->write(QString("params.readTimeout: %1").arg(serverParams.readTimeout));
+        logger->write(QString("params.writeTimeout: %1").arg(serverParams.writeTimeout));
+        logger->write(QString("params.connectTimeout: %1").arg(serverParams.connectTimeout));
 
-
-    stopFlag = false;
-    FDOThread* thread= new FDOThread();
-    thread->setParams(this);
-    connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
-    thread->start();
+        stopFlag = false;
+        FDOThread* fdoThread = new FDOThread();
+        fdoThread->setParams(this);
+        connect(fdoThread, SIGNAL(finished()), fdoThread, SLOT(deleteLater()));
+        fdoThread->start();
+        thread = fdoThread;
+    }
 }
 
 void ShtrihFiscalPrinter::stopFDOThread()
 {
-    stopFlag = true;
+    if (thread != NULL)
+    {
+        stopFlag = true;
+        thread->quit();
+        thread->wait();
+        thread = NULL;
+    }
 }
 
 void ShtrihFiscalPrinter::sendDocuments()
@@ -5451,7 +5464,7 @@ int ShtrihFiscalPrinter::printImage(PrinterImage image)
 
 QString ShtrihFiscalPrinter::getVersion()
 {
-    return "1.3";
+    return "1.4";
 }
 
 int ShtrihFiscalPrinter::printImage(int startLine, int endLine)
