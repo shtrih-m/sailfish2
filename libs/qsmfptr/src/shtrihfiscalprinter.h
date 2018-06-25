@@ -1271,6 +1271,7 @@ struct FSSale2{
     uint8_t operation;      // in, Тип операции: 1 байт
     uint64_t quantity;      // in, Количество: 5 байт 0000000000…9999999999
     uint64_t price;         // in, Цена: 5 байт 0000000000…9999999999
+    uint64_t amount;        // in, Сумма: 5 байт 0000000000…9999999999
     uint64_t taxAmount;     // in, Налог: 5 байт 0000000000…9999999999
     uint8_t tax;            // in, Налог: 1 байт
     uint8_t department;     // in, Номер отдела: 1 байт
@@ -2390,6 +2391,7 @@ public:
     int fsFindDocument(FSFindDocument& data);
     int fsOpenDay(FSOpenDay& data);
     int fsWriteTLV(QByteArray& data);
+    int fsWriteTLVOperation(QByteArray& data);
     int fsPrintItem(FSReceiptItem& data);
     int fsInitEEPROM();
     int fsReadRegisters(FSReadRegisters& data);

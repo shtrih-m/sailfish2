@@ -6762,7 +6762,7 @@ int ShtrihFiscalPrinter::fsCloseReceipt(FSCloseReceipt& data)
     }
     command.write(data.roundAmount, 1);
     for (int i=0;i<6;i++){
-        command.write8(data.taxAmount[i]);
+        command.write(data.taxAmount[i], 5);
     }
     command.write8(data.taxSystem);
     command.write(data.text);
@@ -6815,6 +6815,7 @@ int ShtrihFiscalPrinter::fsPrintSale2(FSSale2& data)
     command.write8(data.operation);
     command.write(data.quantity, 6);
     command.write(data.price, 5);
+    command.write(data.amount, 5);
     command.write(data.taxAmount, 5);
     command.write(data.tax, 1);
     command.write(data.department, 1);
@@ -6942,6 +6943,26 @@ int ShtrihFiscalPrinter::printTag(uint16_t tagId, QString tagValue)
 
 void ShtrihFiscalPrinter::setServerParams(ServerParams value){
     serverParams = value;
+}
+
+/*****************************************************************************
+ *
+Передать произвольную TLV структуру привязанную к операции FF4DH.
+    Код команды FF4DH. Длина сообщения: 6+N байт.
+    Пароль системного администратора: 4 байта
+    TLV Структура:   N байт (мах 250 байт)
+Ответ: FF4Dh Длина сообщения: 1 байт.
+    Код ошибки: 1 байт
+
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::fsWriteTLVOperation(QByteArray& data)
+{
+    logger->write("fsWriteTLVOperation");
+    PrinterCommand command(0xFF4D);
+    command.write(sysPassword, 4);
+    command.write(data);
+    return send(command);
 }
 
 /*****************************************************************************

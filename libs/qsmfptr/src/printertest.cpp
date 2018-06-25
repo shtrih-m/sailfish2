@@ -61,66 +61,55 @@ void PrinterTest::execute()
 {
     qDebug("PrinterTest::execute");
 
-    JournalPrinter journal("journal.txt");
-
-    qDebug("Read FS document 21");
-    journal.setDocNumber(FSDocNumber);
-    journal.show(journal.readDoc(21));
-
-    qDebug("Read FS document 22");
-    journal.setDocNumber(FSDocNumber);
-    journal.show(journal.readDoc(22));
-
-    qDebug("Read FP document 24");
-    journal.setDocNumber(FPDocNumber);
-    journal.show(journal.readDoc(24));
-
-    qDebug("Read FP document 25");
-    journal.setDocNumber(FPDocNumber);
-    journal.show(journal.readDoc(25));
-
-    // connectPrinter();
-    // testHeaderTrailer();
-    // testHeaderEnabled();
-    // disconnectPrinter();
-}
-
-/*
-    JournalPrinter journal("journal.txt");
-    journal.show(journal.readDoc(28));
-    //journal.show(journal.readAll());
-    //journal.show(journal.readDay(7));
-    //journal.show(journal.readDocRange(21, 22));
-    //journal.deleteFile();
-
-    while (true)
-    {
-        try
-        {
-            connectPrinter();
-            //readShortStatus();
-            printString();
-            QThread::msleep(1000);
-
-        } catch (...) {
-            qDebug() << "Exception caught...";
-        }
-    }
+    connectPrinter();
+    testWriteTLVOperation();
     disconnectPrinter();
 
-    //journal.show(journal.readDay(17));
-    //journal.show(journal.readDay(5));
-    //journal.show(journal.readDoc(121));
-    //journal.show(journal.readDoc(122));
-    //journal.show(journal.readDocRange(121, 122));
+}
 
-    //printer->jrnPrintAll();
-    //printer->jrnPrintDoc(114);
-    //printer->jrnPrintCurrentDay();
-    //printer->jrnPrintDay(1);
-    //printer->jrnPrintDocRange(107, 109);
-    //disconnectPrinter();
-    */
+void PrinterTest::testWriteTLVOperation()
+{
+    check(printer->resetPrinter());
+    // Open receipt
+    OpenReceiptCommand openReceipt;
+    openReceipt.receiptType = SMFP_RECTYPE_SALE;
+    check(printer->openReceipt(openReceipt));
+    check(printer->waitForPrinting());
+    // Item 1
+    QString itemText = "Line1";
+    ReceiptItemCommand itemCommand;
+    itemCommand.quantity = 1000;
+    itemCommand.price = 123456;
+    itemCommand.department = 1;
+    itemCommand.tax1 = 1;
+    itemCommand.tax2 = 0;
+    itemCommand.tax3 = 0;
+    itemCommand.tax4 = 0;
+    itemCommand.text = itemText;
+    check(printer->printSale(itemCommand));
+    check(printer->waitForPrinting());
+    // TLV linked to operation
+    TlvTags tags;
+    TlvTag* tag = tags.find(1212);
+    QByteArray ba = tag->getData("1212");
+    check(printer->fsWriteTLVOperation(ba));
+    tag = tags.find(1214);
+    ba = tag->getData("1214");
+    check(printer->fsWriteTLVOperation(ba));
+    // Close receipt
+    CloseReceiptCommand closeCommand;
+    closeCommand.amount1 = 123456;
+    closeCommand.amount2 = 0;
+    closeCommand.amount3 = 0;
+    closeCommand.amount4 = 0;
+    closeCommand.discount = 0;
+    closeCommand.tax1 = 0;
+    closeCommand.tax2 = 0;
+    closeCommand.tax3 = 0;
+    closeCommand.tax4 = 0;
+    closeCommand.text = "Закрытие чека";
+    check(printer->closeReceipt(closeCommand));
+}
 
 void PrinterTest::testHeaderEnabled()
 {
@@ -909,21 +898,4 @@ void PrinterTest::printZReport()
 
     printDayIsOpened();
 }
-
-/*
-QGuiApplication* app = SailfishApp::application(argc, argv);
-QString fileName = ":/translations/translations/QmlTest.qm";
-QFile file(fileName);
-if (!file.exists()){
-    qDebug() << "File not exists, " << fileName;
-}
-
-QTranslator translator;
-if (!translator.load(fileName)){
-    qDebug() << "Failed to load translation file, " << fileName;
-}
-if (!app->installTranslator(&translator)){
-    qDebug() << "Failed to install translation";
-}
-*/
 
