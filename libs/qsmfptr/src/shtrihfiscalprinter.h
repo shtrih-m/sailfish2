@@ -160,6 +160,33 @@ enum DeviceCode {
     APP_MEMORY = 0x86 // память программ ККТ
 };
 
+// Payment type (tag 1214)
+enum PaymentType {
+  PaymentTypeDeposit = 1,           // 1 Предоплата 100%
+  PaymentTypePartialDeposit = 2,    // 2 Частичная предоплата
+  PaymentTypeAdvance = 3,           // 3 Аванс
+  PaymentTypeCash = 4,              // 4 Полный расчет
+  PaymentTypeCashCredit = 5,        // 5. Частичный расчет и кредит
+  PaymentTypeCredit = 6,            // 6. Передача в кредит
+  PaymentTypePayCredit = 7          // 7. Оплата кредита
+};
+
+// Payment item (tag 1212)
+enum PaymentItem {
+  PaymentItemNormal = 1,            // 1. Товар
+  PaymentItemExcise = 2,            // 2. Подакцизный товар
+  PaymentItemJob = 3,               // 3. Работа
+  PaymentItemService = 4,           // 4. Услуга
+  PaymentItemBet = 5,               // 5. Ставка азартной игры
+  PaymentItemGamePrize = 6,         // 6. Выигрыш азартной игры
+  PaymentItemLotteryBill = 7,       // 7. Лотерейный билет
+  PaymentItemLotteryPrize = 8,      // 8. Выигрыш лотереи
+  PaymentItemIntellect = 9,         // 9. Предоставление РИД
+  PaymentItemPayment = 10,          // 10. Платеж
+  PaymentItemComposite = 11,        // 11. Составной предмет расчета
+  PaymentItemOther = 12             // 12. Иной предмет расчета
+  };
+
 enum PrinterAlignment {
     Left = 0,
     Center = 1,
@@ -1268,16 +1295,16 @@ struct FSSale{
 };
 
 struct FSSale2{
-    uint8_t operation;      // in, Тип операции: 1 байт
-    uint64_t quantity;      // in, Количество: 5 байт 0000000000…9999999999
-    uint64_t price;         // in, Цена: 5 байт 0000000000…9999999999
-    uint64_t amount;        // in, Сумма: 5 байт 0000000000…9999999999
-    uint64_t taxAmount;     // in, Налог: 5 байт 0000000000…9999999999
-    uint8_t tax;            // in, Налог: 1 байт
-    uint8_t department;     // in, Номер отдела: 1 байт
-    uint8_t paymentType;    // in,
-    uint8_t paymentMode;    // in,
-    QString text;           // in, Текст
+    uint8_t operation;          // in, Тип операции: 1 байт
+    uint64_t quantity;          // in, Количество: 5 байт 0000000000…9999999999
+    uint64_t price;             // in, Цена: 5 байт 0000000000…9999999999
+    uint64_t amount;            // in, Сумма: 5 байт 0000000000…9999999999
+    uint64_t taxAmount;         // in, Налог: 5 байт 0000000000…9999999999
+    uint8_t tax;                // in, Налог: 1 байт
+    uint8_t department;         // in, Номер отдела: 1 байт
+    PaymentType paymentType;    // in,
+    PaymentItem paymentItem;    // in,
+    QString text;               // in, Текст
 };
 
 struct FSCloseReceipt{
@@ -2421,6 +2448,7 @@ public:
     int fsPrintCorrection2(FSPrintCorrection2& data);
     int fsDiscountCharge(FSDiscountCharge& data);
     int fsWriteTag(uint16_t tagId, QString tagValue);
+    int fsWriteOperationTag(uint16_t tagId, QString tagValue);
     int printTag(uint16_t tagId, QString tagValue);
 
     QString PrinterDateToStr(PrinterDate date);

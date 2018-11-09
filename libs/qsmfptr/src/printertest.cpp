@@ -62,7 +62,7 @@ void PrinterTest::execute()
     qDebug("PrinterTest::execute");
 
     connectPrinter();
-    testWriteTLVOperation();
+    testSale2();
     disconnectPrinter();
 
 }
@@ -504,6 +504,48 @@ void PrinterTest::printImage(QString path)
         return;
     }
     printImage(image);
+}
+
+void PrinterTest::testSale2()
+{
+    check(printer->resetPrinter());
+    // Open receipt
+    OpenReceiptCommand openReceipt;
+    openReceipt.receiptType = SMFP_RECTYPE_SALE;
+    check(printer->openReceipt(openReceipt));
+    check(printer->waitForPrinting());
+    // Item 1
+    FSSale2 item;
+    item.operation = 1;
+    item.quantity = 1000;
+    item.price = 123456;
+    item.amount = 0xFFFFFFFFFF;
+    item.taxAmount = 0xFFFFFFFFFF;
+    item.tax = 0;
+    item.department = 1;
+    item.paymentType = PaymentTypeCash;
+    item.paymentItem = PaymentItemNormal;
+    item.text = "itemText";
+    check(printer->fsPrintSale2(item));
+    check(printer->waitForPrinting());
+    // Tags
+    check(printer->fsWriteTag(1203, "007705034202"));
+    check(printer->fsWriteTag(1057, "1"));
+    check(printer->fsWriteTag(1044, "183248563758276bakdjsh"));
+    check(printer->fsWriteOperationTag(1226, "007705034202"));
+    // Close receipt
+    CloseReceiptCommand closeCommand;
+    closeCommand.amount1 = 123456;
+    closeCommand.amount2 = 0;
+    closeCommand.amount3 = 0;
+    closeCommand.amount4 = 0;
+    closeCommand.discount = 0;
+    closeCommand.tax1 = 0;
+    closeCommand.tax2 = 0;
+    closeCommand.tax3 = 0;
+    closeCommand.tax4 = 0;
+    closeCommand.text = "Закрытие чека";
+    check(printer->closeReceipt(closeCommand));
 }
 
 void PrinterTest::printImage(QImage image)

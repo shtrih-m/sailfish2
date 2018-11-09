@@ -120,7 +120,7 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     this->logger = logger;
 
     taxPassword = 0;
-    usrPassword = 1;
+    usrPassword = 30;
     sysPassword = 30;
     startLine = 2;
     timeout = 1000;
@@ -3130,7 +3130,7 @@ int ShtrihFiscalPrinter::printStorno(ReceiptItemCommand& data)
 
 void ShtrihFiscalPrinter::beforeCloseReceipt()
 {
-    if (userNameEnabled && (deviceType.model == 19))
+    if (userNameEnabled && (deviceType.model == 19) && (!userName.isEmpty()))
     {
         fsWriteTag(1048, userName);
     }
@@ -5919,7 +5919,7 @@ int ShtrihFiscalPrinter::fsReset(int code){
 int ShtrihFiscalPrinter::fsCancelDocument(){
     logger->write("fsCancelDocument");
     PrinterCommand command(0xFF08);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     return send(command);
 }
 
@@ -6066,7 +6066,7 @@ int ShtrihFiscalPrinter::fsOpenDay(FSOpenDay& data){
 int ShtrihFiscalPrinter::fsWriteTLV(QByteArray& data){
     logger->write("fsWriteTLV");
     PrinterCommand command(0xFF0C);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     command.write(data);
     return send(command);
 }
@@ -6104,7 +6104,7 @@ int ShtrihFiscalPrinter::fsWriteTLV(QByteArray& data){
 int ShtrihFiscalPrinter::fsPrintItem(FSReceiptItem& data){
     logger->write("fsPrintItem");
     PrinterCommand command(0xFF0D);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     command.write8(data.operation);
     command.write(data.quantity, 5);
     command.write(data.price, 5);
@@ -6305,7 +6305,7 @@ int ShtrihFiscalPrinter::fsStartCorrectionReceipt()
 {
     logger->write("fsStartCorrectionReceipt");
     PrinterCommand command(0xFF35);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     return send(command);
 }
 
@@ -6328,7 +6328,7 @@ int ShtrihFiscalPrinter::fsPrintCorrection(FSPrintCorrection& data)
 {
     logger->write("fsPrintCorrection");
     PrinterCommand command(0xFF36);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     command.write(data.total, 5);
     command.write8(data.operation);
     data.resultCode = send(command);
@@ -6412,7 +6412,7 @@ int ShtrihFiscalPrinter::fsReadCommStatus(FSCommStatus& data)
 {
     logger->write("fsReadCommStatus");
     PrinterCommand command(0xFF39);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     int resultCode = send(command);
     if (resultCode == 0){
         data.flags = command.read8();
@@ -6697,7 +6697,7 @@ int ShtrihFiscalPrinter::fsPrintSale(FSSale& data)
     if (failed(rc)) return rc;
 
     PrinterCommand command(0xFF44);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     command.write8(data.operation);
     command.write(data.quantity, 5);
     command.write(data.price, 5);
@@ -6756,7 +6756,7 @@ int ShtrihFiscalPrinter::fsCloseReceipt(FSCloseReceipt& data)
 {
     logger->write("fsCloseReceipt");
     PrinterCommand command(0xFF45);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     for (int i=0;i<16;i++){
         command.write(data.payments[i], 5);
     }
@@ -6811,7 +6811,7 @@ int ShtrihFiscalPrinter::fsPrintSale2(FSSale2& data)
     if (failed(rc)) return rc;
 
     PrinterCommand command(0xFF46);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     command.write8(data.operation);
     command.write(data.quantity, 6);
     command.write(data.price, 5);
@@ -6820,7 +6820,7 @@ int ShtrihFiscalPrinter::fsPrintSale2(FSSale2& data)
     command.write(data.tax, 1);
     command.write(data.department, 1);
     command.write(data.paymentType, 1);
-    command.write(data.paymentMode, 1);
+    command.write(data.paymentItem, 1);
     command.write(data.text);
     rc = send(command);
     if (succeeded(rc)){
@@ -6900,7 +6900,7 @@ int ShtrihFiscalPrinter::fsDiscountCharge(FSDiscountCharge& data)
 {
     logger->write("fsDiscountCharge");
     PrinterCommand command(0xFF4B);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     command.write(data.discount, 5);
     command.write(data.charge, 5);
     command.write(data.tax, 1);
@@ -6922,6 +6922,15 @@ int ShtrihFiscalPrinter::fsWriteTag(uint16_t tagId, QString tagValue){
         printTag(tagId, tagValue);
     }
     return rc;
+}
+
+int ShtrihFiscalPrinter::fsWriteOperationTag(uint16_t tagId, QString tagValue){
+    logger->write("fsWriteOperationTag");
+
+    TLVList list;
+    list.add(tagId, tagValue);
+    QByteArray ba = list.getData();
+    return fsWriteTLVOperation(ba);
 }
 
 int ShtrihFiscalPrinter::printTag(uint16_t tagId, QString tagValue)
@@ -6960,7 +6969,7 @@ int ShtrihFiscalPrinter::fsWriteTLVOperation(QByteArray& data)
 {
     logger->write("fsWriteTLVOperation");
     PrinterCommand command(0xFF4D);
-    command.write(sysPassword, 4);
+    command.write(usrPassword, 4);
     command.write(data);
     return send(command);
 }

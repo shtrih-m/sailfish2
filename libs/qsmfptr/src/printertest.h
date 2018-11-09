@@ -38,6 +38,7 @@ private:
     QBluetoothLocalDevice localDevice;
     QBluetoothDeviceDiscoveryAgent discoveryAgent;
 
+    void testSale2();
     void testWriteTLVOperation();
     void testHeaderTrailer();
     void testHeaderEnabled();
