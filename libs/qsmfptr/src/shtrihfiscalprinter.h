@@ -1314,6 +1314,10 @@ struct FSCloseReceipt{
     uint8_t taxSystem;      // in, Система налогообложения ( 1 байт)
     QString text;           // in, Текст
     uint64_t change;        // out, Сдача (5 байт)
+    uint32_t docNum;        // Номер ФД :4 байта
+    uint32_t docMac;        // Фискальный признак: 4 байта
+    PrinterDate date;
+    PrinterTime time;       // Дата и время: 5 байт DATE_TIME3
 };
 
 struct FSDiscountCharge{

@@ -529,23 +529,32 @@ void PrinterTest::testSale2()
     check(printer->fsPrintSale2(item));
     check(printer->waitForPrinting());
     // Tags
-    check(printer->fsWriteTag(1203, "007705034202"));
-    check(printer->fsWriteTag(1057, "1"));
-    check(printer->fsWriteTag(1044, "183248563758276bakdjsh"));
-    check(printer->fsWriteOperationTag(1226, "007705034202"));
+    check(printer->fsWriteTag(1044, QString("Прием платежа")));
+
+    //check(printer->fsWriteTag(1203, "007705034202"));
+    //check(printer->fsWriteTag(1057, "1"));
+    //check(printer->fsWriteOperationTag(1226, "007705034202"));
     // Close receipt
-    CloseReceiptCommand closeCommand;
-    closeCommand.amount1 = 123456;
-    closeCommand.amount2 = 0;
-    closeCommand.amount3 = 0;
-    closeCommand.amount4 = 0;
-    closeCommand.discount = 0;
-    closeCommand.tax1 = 0;
-    closeCommand.tax2 = 0;
-    closeCommand.tax3 = 0;
-    closeCommand.tax4 = 0;
+    FSCloseReceipt closeCommand;
+    for (int i=0;i<16;i++)
+    {
+        closeCommand.payments[i] = 0;
+    }
+    closeCommand.payments[0] = 123456;
+    closeCommand.roundAmount = 0;
+    for (int i=0;i<6;i++)
+    {
+        closeCommand.taxAmount[i] = 0xFFFFFFFFFFFF;
+    }
+    closeCommand.taxSystem = 0;
     closeCommand.text = "Закрытие чека";
-    check(printer->closeReceipt(closeCommand));
+    check(printer->fsCloseReceipt(closeCommand));
+
+    qDebug() << "Сдача    : " << closeCommand.change;
+    qDebug() << "Номер ФД : " << closeCommand.docNum;
+    qDebug() << "ФПД      : " << closeCommand.docMac;
+    qDebug() << "Дата     :" << printer->PrinterDateToStr(closeCommand.date);
+    qDebug() << "Время    :" << printer->PrinterTimeToStr(closeCommand.time);
 }
 
 void PrinterTest::printImage(QImage image)
