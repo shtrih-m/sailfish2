@@ -337,6 +337,7 @@ int ShtrihFiscalPrinter::connectDevice()
     if (connected) return rc;
 
     protocol->connect();
+    dayNumber = 0;
     rc = readDeviceType(deviceType);
     if (failed(rc)) return rc;
 
