@@ -154,6 +154,7 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     filter = new PrinterFilter();
     journal = new JournalPrinter("journal.txt");
     mutex = new QMutex(QMutex::RecursionMode::Recursive);
+    dayNumber = 0;
 }
 
 ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
@@ -5556,6 +5557,11 @@ uint16_t ShtrihFiscalPrinter::readDayNumber()
 {
     ReadLongStatusCommand command;
     check(readLongStatus(command));
+    if (command.dayNumber == 0){
+        command.dayNumber = dayNumber;
+    } else{
+        dayNumber = command.dayNumber;
+    }
     return command.dayNumber;
 }
 

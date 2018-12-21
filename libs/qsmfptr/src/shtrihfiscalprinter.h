@@ -2519,6 +2519,7 @@ private:
     uint8_t numTrailerRow;
     uint8_t numHeaderLines;
     uint8_t numTrailerLines;
+    uint16_t dayNumber;
     QString userName;
     QString fiscalID;
     QString regNumber;
