@@ -12,9 +12,7 @@ const uint8_t NAK = 0x15;
 // maximum counters
 const int maxEnqNumber = 3;
 const int maxNakCommandNumber = 3;
-const int maxNakAnswerNumber = 3;
 const int maxAckNumber = 3;
-const int maxRepeatCount = 1;
 
 PrinterProtocol1::PrinterProtocol1(PrinterPort* port, Logger* logger)
 {
@@ -145,7 +143,6 @@ int PrinterProtocol1::send(QByteArray& tx, int timeout, QByteArray& rx)
             return SMFPTR_E_NOCONNECTION;
         }
     }
-    return rc;
 }
 
 int PrinterProtocol1::writeCommand(QByteArray tx)
@@ -170,6 +167,8 @@ int PrinterProtocol1::writeCommand(QByteArray tx)
                 logger->write("nakCommandNumber >= maxNakCommandNumber");
                 return SMFPTR_E_NOCONNECTION;
             }
+            return rc;
+
         default:
             return rc;
         }

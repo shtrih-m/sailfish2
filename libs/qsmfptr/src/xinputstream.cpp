@@ -56,12 +56,12 @@ QString XInputStream::readStr(int count)
 
 uint16_t XInputStream::read16()
 {
-    return (uint16_t)read(2);
+    return static_cast<uint16_t>(read(2));
 }
 
 uint32_t XInputStream::read32()
 {
-    return (uint32_t)read(4);
+    return static_cast<uint32_t>(read(4));
 }
 
 uint64_t XInputStream::read64()

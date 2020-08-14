@@ -9,14 +9,14 @@ uint64_t round2(double value){
     return (value + 0.5);
 }
 
-QString amountToStr(long value)
+QString amountToStr(uint64_t value)
 {
     QString buffer;
     double d = value;
     return buffer.sprintf("%.2f", d / 100.0);
 }
 
-QString quantityToStr(long value) {
+QString quantityToStr(uint64_t value) {
     QString buffer;
     double d = value;
     return buffer.sprintf("%.3f", d / 1000.0);
@@ -410,7 +410,7 @@ void TextFilter::closeReceipt(uint8_t event, CloseReceiptCommand& data)
             // ВСЕГО
             add(STotalText, summToStr(receiptTotal));
             // СКИДКА
-            long discountAmount = round(receiptTotal * data.discount / 100.0);
+            long discountAmount = round2(receiptTotal * data.discount / 100.0);
             QString line = QString(SDiscountText) + " " + amountToStr(data.discount) + "%";
             add(line, summToStr(discountAmount)
                     + getTaxText(data.tax1, data.tax2, data.tax3, data.tax4));
@@ -790,4 +790,7 @@ void TextFilter::addEJLine(QString s)
 
 void TextFilter::writeParameter(uint8_t event, int ParamId, QString value)
 {
+  Q_UNUSED(event);
+  Q_UNUSED(ParamId);
+  Q_UNUSED(value);
 }

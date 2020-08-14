@@ -1,0 +1,12 @@
+Фаил bluetoothport.cpp, строчка 64:
+
+Вместо:
+    QString suuid = "{00001101-0000-1000-8000-00805F9B34FB}";
+
+    socket->connectToService(QBluetoothAddress(address),
+        QBluetoothUuid(suuid));
+Поставить:
+    //QString suuid = "{00001101-0000-1000-8000-00805F9B34FB}";
+
+    socket->connectToService(QBluetoothAddress(address),
+        QBluetoothUuid::Sdp);

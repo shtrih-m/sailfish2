@@ -24,8 +24,8 @@
 #include "printertypes.h"
 #include "fiscalprinter.h"
 #include "serverconnection.h"
-#include "JournalPrinter.h"
-#include "Logger.h"
+#include "journalprinter.h"
+#include "logger.h"
 
 // ////////////////////////////////////////////////////////////////////////
 // Parameter ID
@@ -1095,8 +1095,8 @@ struct FSDocument11
 {
     PrinterDate date;
     PrinterTime time;
-    uint64_t docNum;
-    uint64_t docMac;
+    uint32_t docNum;
+    uint32_t docMac;
     QString taxID;
     QString regNumber;
     uint8_t taxType;
@@ -1108,8 +1108,8 @@ struct FSDocument6
 {
     PrinterDate date;
     PrinterTime time;
-    uint64_t docNum;
-    uint64_t docMac;
+    uint32_t docNum;
+    uint32_t docMac;
     QString taxID;
     QString regNumber;
 };
@@ -1118,8 +1118,8 @@ struct FSDocument2
 {
     PrinterDate date;
     PrinterTime time;
-    uint64_t docNum;
-    uint64_t docMac;
+    uint32_t docNum;
+    uint32_t docMac;
     uint32_t dayNum;
 };
 
@@ -1127,8 +1127,8 @@ struct FSDocument3
 {
     PrinterDate date;
     PrinterTime time;
-    uint64_t docNum;
-    uint64_t docMac;
+    uint32_t docNum;
+    uint32_t docMac;
     uint8_t operationType;
     uint64_t amount;
 };
@@ -1137,8 +1137,8 @@ struct FSDocument21
 {
     PrinterDate date;
     PrinterTime time;
-    uint64_t docNum;
-    uint64_t docMac;
+    uint32_t docNum;
+    uint32_t docMac;
     uint32_t docCount;
     PrinterDate docDate;
     PrinterTime docTime;
@@ -1177,6 +1177,12 @@ struct FSReceiptItem{
     uint64_t barcode;       // in, Штрих-код: 5 байт 000000000000…999999999999
     QString text;           // in, название товара и скидки. Названия товара и
 };                           // in, скидки должны заканчиваться нулём
+
+struct FSReadOpenParam{
+    uint8_t docNumber;      // in, Порядковый номер отчета о регистрации/перерегистрации: 1 байт
+    uint16_t tagId;         // in, Номер тега (Тип Т, TLV параметра): 2 байта (если T=FFFFh2, то читать TLV структуру командой FF3Bh)
+    QByteArray data;        // out, TLV структура: X1 байт
+};
 
 struct FSReadRegisters{
     uint16_t itemCode;          // in, Код товара (2 байта) 1…9999
@@ -1457,7 +1463,7 @@ public:
         } else
         {
             uint64_t ivalue = 0;
-            for (int i = 0; i < info.size; i++)
+            for (uint i = 0; i < info.size; i++)
             {
                 ivalue += data[i] << (i*8);
             }
@@ -1474,10 +1480,10 @@ public:
         } else
         {
              QByteArray result;
-             uint64_t ivalue = value.toLongLong();
+             uint64_t ivalue = static_cast<uint64_t>(value.toLongLong());
              for (int i = 0; i < info.size; i++)
              {
-                 result.append((uint8_t) ((ivalue >> i * 8) & 0xFF));
+                 result.append(static_cast<uint8_t> ((ivalue >> i * 8) & 0xFF));
              }
 
              return result;
@@ -1593,7 +1599,7 @@ public:
 class CsvTablesReader{
 private:
     bool isComment(QString line);
-    int getParamInt(QString line, int index);
+    qlonglong getParamInt(QString line, int index);
     QString getParamStr(QString line, int index);
 public:
     CsvTablesReader(){}
@@ -2359,10 +2365,10 @@ public:
     uint16_t readDayNumber();
     uint64_t readCashRegister(uint8_t number);
     uint16_t readOperationRegister(uint8_t number);
-    int readTableInt(int table, int row, int field);
-    QString readTableStr(int table, int row, int field);
-    int writeTableStr(int table, int row, int field, QString value);
-    int readTable(int table, int row, int field, QString text);
+    int readTableInt(uint8_t table, uint16_t row, uint8_t field);
+    QString readTableStr(uint8_t table, uint16_t row, uint8_t field);
+    int writeTableStr(uint8_t table, uint16_t row, uint8_t field, QString value);
+    int readTable(uint8_t table, uint16_t row, uint8_t field, QString text);
     void check(int resultCode);
     QStringList readHeader();
     QStringList readTrailer();
@@ -2407,7 +2413,7 @@ public:
     int writeBlock(QByteArray block);
     void sendBlocks();
     bool sendBlock(QByteArray block, QByteArray& result);
-    int getPrinterField(int table, int row, int field, PrinterField& printerField);
+    int getPrinterField(uint8_t table, uint16_t row, uint8_t field, PrinterField& printerField);
     void setPollInterval(int value);
     void lock();
     void unlock();
@@ -2424,6 +2430,7 @@ public:
     int fsWriteTLV(QByteArray& data);
     int fsWriteTLVOperation(QByteArray& data);
     int fsPrintItem(FSReceiptItem& data);
+    int fsReadOpenParam(FSReadOpenParam& data);
     int fsInitEEPROM();
     int fsReadRegisters(FSReadRegisters& data);
     int fsReadBufferStatus(FSBufferStatus& data);
@@ -2483,6 +2490,8 @@ public:
     FSDocument11 decodeDocument11(QByteArray data);
     FSDocument21 decodeDocument21(QByteArray data);
     Logger* getLogger();
+    int correctDate();
+    int readDate(QDateTime printerDate);
 private:
     Logger* logger;
     QMutex* mutex;
@@ -2532,6 +2541,7 @@ public:
     bool userNameEnabled;
     bool printTagsEnabled;
     uint32_t lineLength[10];
+    uint32_t validTimeDiffInSecs;
     PrinterAlignment imageAlignment;
 
     IPrinterFilter* getFilter(){

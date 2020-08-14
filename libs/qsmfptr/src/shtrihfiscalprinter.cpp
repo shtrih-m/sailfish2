@@ -16,20 +16,23 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QByteArray>
+#include <QDate>
+#include <QTime>
+#include <QDateTime>
 
 #include <vector>
 
 #include "shtrihfiscalprinter.h"
-#include "ServerConnection.h"
+#include "serverconnection.h"
 #include "fiscalprinter.h"
 #include "tlvtag.h"
 #include "utils.h"
 #include <qzint.h>
 #include <tlvlist.h>
-#include "JournalPrinter.h"
-#include "TextFilter.h"
-#include "XInputStream.h"
-#include "Logger.h"
+#include "journalprinter.h"
+#include "textfilter.h"
+#include "xinputstream.h"
+#include "logger.h"
 
 
 
@@ -37,7 +40,7 @@ bool CsvTablesReader::isComment(QString line) {
     return line.startsWith("//");
 }
 
-int CsvTablesReader::getParamInt(QString line, int index)
+qlonglong CsvTablesReader::getParamInt(QString line, int index)
 {
     return getParamStr(line, index).toLongLong();
 }
@@ -155,6 +158,7 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     journal = new JournalPrinter("journal.txt");
     mutex = new QMutex(QMutex::RecursionMode::Recursive);
     dayNumber = 0;
+    validTimeDiffInSecs = 0;
 }
 
 ShtrihFiscalPrinter::~ShtrihFiscalPrinter()
@@ -1198,8 +1202,8 @@ int ShtrihFiscalPrinter::writeTable(TableValueCommand& data)
     return data.resultCode;
 }
 
-int ShtrihFiscalPrinter::writeTableStr(int table, int row,
-    int field, QString value)
+int ShtrihFiscalPrinter::writeTableStr(uint8_t table, uint16_t row,
+    uint8_t field, QString value)
 {
     logger->write(QString("writeTable(%1, %2, %3, %4)").arg(table).arg(row).arg(field).arg(value));
     filter->writeTableStr(EVENT_BEFORE, table, row, field, value);
@@ -5566,7 +5570,7 @@ uint16_t ShtrihFiscalPrinter::readDayNumber()
     return command.dayNumber;
 }
 
-int ShtrihFiscalPrinter::getPrinterField(int table, int row, int field, PrinterField& printerField )
+int ShtrihFiscalPrinter::getPrinterField(uint8_t table, uint16_t row, uint8_t field, PrinterField& printerField )
 {
     int rc = 0;
     if (fields.find(table, field, printerField))
@@ -5599,7 +5603,7 @@ int ShtrihFiscalPrinter::getPrinterField(int table, int row, int field, PrinterF
     return rc;
 }
 
-QString ShtrihFiscalPrinter::readTableStr(int table, int row, int field)
+QString ShtrihFiscalPrinter::readTableStr(uint8_t table, uint16_t row, uint8_t field)
 {
     logger->write(QString("readTable(%1, %2, %3)").arg(table).arg(row).arg(field));
 
@@ -5617,7 +5621,7 @@ QString ShtrihFiscalPrinter::readTableStr(int table, int row, int field)
     return result;
 }
 
-int ShtrihFiscalPrinter::readTable(int table, int row, int field, QString text)
+int ShtrihFiscalPrinter::readTable(uint8_t table, uint16_t row, uint8_t field, QString text)
 {
     logger->write(QString("readTable(%1, %2, %3)").arg(table).arg(row).arg(field));
 
@@ -5641,7 +5645,7 @@ int ShtrihFiscalPrinter::readTable(int table, int row, int field, QString text)
     return rc;
 }
 
-int ShtrihFiscalPrinter::readTableInt(int table, int row, int field)
+int ShtrihFiscalPrinter::readTableInt(uint8_t table, uint16_t row, uint8_t field)
 {
     QString text = readTableStr(table, row, field);
     return text.toInt();
@@ -6123,6 +6127,31 @@ int ShtrihFiscalPrinter::fsPrintItem(FSReceiptItem& data){
     command.write(data.text);
     return send(command);
 }
+
+/***************************************************************************
+Запрос параметра открытия ФН FF0E
+Код команды FF0Eh. Длина сообщения: 9 байт.
+    Пароль системного администратора: 4 байта
+    Порядковый номер отчета о регистрации/перерегистрации: 1 байт
+    Номер тега (Тип Т, TLV параметра): 2 байта (если T=FFFFh2, то читать TLV структуру командой FF3Bh)
+Ответ: FF0Eh Длина сообщения: 2+1+X1 байт.
+    Код ошибки: 1 байт
+    TLV структура: X1 байт
+
+***************************************************************************/
+
+int ShtrihFiscalPrinter::fsReadOpenParam(FSReadOpenParam& data){
+    logger->write("fsReadOpenParam");
+    PrinterCommand command(0xFF0E);
+    command.write(usrPassword, 4);
+    command.write8(data.docNumber);
+    command.write16(data.tagId);
+    int rc = send(command);
+    if (succeeded(rc)){
+        data.data = command.readBytes();
+    }
+}
+
 
 /***************************************************************************
 Инициализация EEPROM
@@ -7453,7 +7482,7 @@ bool ShtrihFiscalPrinter::canRepeatCommand(uint16_t commandCode)
     case 0xFF0B: // FS: Open day
     case 0xFF0C: // FS: Send TLV data
     case 0xFF0D: // FS: Registration with discount/charge
-    case 0xFF0E: // FS: Storno with discount/charge
+    case 0xFF0E: // FS: Read open parameter
     case 0xFF30: // FS: Read data in buffer
     case 0xFF31: // FS: Read data block from buffer
     case 0xFF32: // FS: Start write buffer
@@ -7478,4 +7507,55 @@ bool ShtrihFiscalPrinter::canRepeatCommand(uint16_t commandCode)
       return true;
   }
   return false;
+}
+
+int ShtrihFiscalPrinter::readDate(QDateTime printerDate)
+{
+    ReadLongStatusCommand status;
+    int rc = readLongStatus(status);
+    if (failed(rc)) return rc;
+
+    PrinterDate pd = status.date;
+    PrinterTime pt = status.time;
+    QDate date = QDate(2000 + pd.year, pd.month, pd.day);
+    QTime time = QTime(pt.hour, pt.min, pt.sec);
+    printerDate = QDateTime(date, time);
+    return rc;
+}
+
+// check fiscal printer date
+int ShtrihFiscalPrinter::correctDate()
+{
+    logger->write("checkDate");
+
+    if (validTimeDiffInSecs <= 0) return 0;
+
+    QDateTime printerDate;
+    int rc = readDate(printerDate);
+    if (failed(rc)) return rc;
+    QDateTime currentDate = QDateTime::currentDateTime();
+    qint64 timeDiffInSecs = abs(currentDate.secsTo(printerDate));
+
+    if (timeDiffInSecs > validTimeDiffInSecs)
+    {
+        if (printerDate.date() != currentDate.date()){
+            DateCommand dc;
+            dc.date.day = currentDate.date().day();
+            dc.date.month = currentDate.date().month();
+            dc.date.year = currentDate.date().year() % 100;
+            rc = writeDate(dc);
+            if (succeeded(rc)){
+                rc = confirmDate(dc);
+            }
+            if (succeeded(rc))
+            {
+                TimeCommand tc;
+                tc.time.hour = currentDate.time().hour();
+                tc.time.min = currentDate.time().minute();
+                tc.time.sec = currentDate.time().second();
+                rc = writeTime(tc);
+            }
+        }
+    }
+    return rc;
 }

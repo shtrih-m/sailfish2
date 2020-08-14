@@ -25,7 +25,7 @@ PrinterTest::PrinterTest(QObject* parent)
     : QObject(parent)
 {
     logger = new Logger("PrinterTest.log");
-    printer = new ShtrihFiscalPrinter(0, logger);
+    printer = new ShtrihFiscalPrinter(nullptr, logger);
 
     port = new BluetoothPort2(logger);
     port->setAddress("00:01:90:C5:60:F7");
@@ -786,7 +786,7 @@ void PrinterTest::readCashRegisters()
 {
     qDebug("Read cash register...");
     ReadCashRegCommand command;
-    for (int i = 0; i < 0xFF; i++) {
+    for (uint8_t i = 0; i < 0xFF; i++) {
         command.number = i;
         printer->readRegister(command);
         if (printer->failed(command.resultCode))
@@ -801,7 +801,7 @@ void PrinterTest::readOperRegisters()
 {
     qDebug("Read operation register...");
     ReadOperRegCommand command;
-    for (int i = 0; i < 0xFF; i++) {
+    for (uint8_t i = 0; i < 0xFF; i++) {
         command.number = i;
         printer->readRegister(command);
         if (printer->failed(command.resultCode))
