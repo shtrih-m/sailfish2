@@ -28,7 +28,8 @@ PrinterTest::PrinterTest(QObject* parent)
     printer = new ShtrihFiscalPrinter(nullptr, logger);
 
     port = new BluetoothPort2(logger);
-    port->setAddress("00:01:90:C5:60:F7");
+    //port->setAddress("00:01:90:C5:60:F7");
+    port->setAddress("30:AE:A4:95:60:3E");
     port->setReadTimeout(10000);
     port->setWriteTimeout(10000);
     port->setConnectTimeout(3000);
@@ -37,8 +38,9 @@ PrinterTest::PrinterTest(QObject* parent)
     protocol = new PrinterProtocol2(port, logger);
     printer->setProtocol(protocol);
     printer->setTimeout(10000);
-    printer->setFdoThreadEnabled(true);
-    printer->setJournalEnabled(true);
+    printer->setFdoThreadEnabled(false);
+    printer->setJournalEnabled(false);
+    printer->validTimeDiffInSecs = 120;
 }
 
 PrinterTest::~PrinterTest()
@@ -62,7 +64,7 @@ void PrinterTest::execute()
     qDebug("PrinterTest::execute");
 
     connectPrinter();
-    testSale2();
+    check(printer->resetPrinter());
     disconnectPrinter();
 
 }
@@ -264,7 +266,7 @@ void PrinterTest::waitForDocuments()
 {
     while (true)
     {
-        int docCount = 0;
+        uint16_t docCount = 0;
         int rc = printer->fsReadDocCount(docCount);
         if (rc != 0) break;
         qDebug() << "docCount = " << docCount;

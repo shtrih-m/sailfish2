@@ -16,6 +16,16 @@
 #include "utils.h"
 #include <QDebug>
 
+void checkValue(int64_t value, int64_t min, int64_t max)
+{
+    if (value < min){
+        throw new TextException("Value less than min");
+    }
+    if (value > max){
+        throw new TextException("Value more than max");
+    }
+}
+
 PrinterCommand::PrinterCommand(uint16_t code)
 {
     this->code = code;
@@ -96,19 +106,22 @@ void PrinterCommand::setBuffer(QByteArray data)
     pos = 0;
 }
 
-void PrinterCommand::write8(uint8_t value)
+void PrinterCommand::write8(uint value)
 {
-    write((uint64_t)value, 1);
+    checkValue(value, 0, 0xFF);
+    write(value, 1);
 }
 
-void PrinterCommand::write16(uint16_t value)
+void PrinterCommand::write16(uint value)
 {
-    write((uint64_t)value, 2);
+    checkValue(value, 0, 0xFFFF);
+    write(value, 2);
 }
 
-void PrinterCommand::write32(uint32_t value)
+void PrinterCommand::write32(uint value)
 {
-    write((uint64_t)value, 4);
+    checkValue(value, 0, 0xFFFFFFFF);
+    write(value, 4);
 }
 
 void PrinterCommand::write(uint64_t value, int len)
@@ -191,7 +204,7 @@ QByteArray PrinterCommand::readBytes(){
     return ba;
 }
 
-uint8_t PrinterCommand::readChar()
+char PrinterCommand::readChar()
 {
     return read8();
 }
@@ -225,7 +238,7 @@ QString PrinterCommand::readStr(int count)
 
 uint16_t PrinterCommand::readShort()
 {
-    return (uint16_t)read(2);
+    return static_cast<uint16_t>(read(2));
 }
 
 uint16_t PrinterCommand::read16()

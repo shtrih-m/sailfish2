@@ -16,15 +16,15 @@
 
 
 struct PrinterDate {
-    uint8_t day;
-    uint8_t month;
-    uint8_t year;
+    int day;
+    int month;
+    int year;
 };
 
 struct PrinterTime {
-    uint8_t hour;
-    uint8_t min;
-    uint8_t sec;
+    int hour;
+    int min;
+    int sec;
 };
 
 #define SMFPTR_OK                0

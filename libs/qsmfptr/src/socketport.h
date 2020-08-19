@@ -36,7 +36,7 @@ public:
 private:
     Logger* logger;
     std::string address;
-    int port;
+    uint16_t port;
     int readTimeout;
     int writeTimeout;
     QTcpSocket socket;

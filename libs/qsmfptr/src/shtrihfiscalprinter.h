@@ -195,26 +195,26 @@ enum PrinterAlignment {
 
 struct StartDumpCommand {
     DeviceCode deviceCode; // in, код устройства
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint16_t blockCount; // out, количество блоков
 };
 
 struct ReadDumpCommand {
-    uint8_t resultCode; // out, результат выполнения
-    DeviceCode deviceCode; // out, код устройства
-    uint16_t blockNumber; // out, номер блока
-    uint8_t blockData[32]; // out, данные блока
+    int resultCode;         // out, результат выполнения
+    DeviceCode deviceCode;  // out, код устройства
+    uint16_t blockNumber;   // out, номер блока
+    char blockData[32];     // out, данные блока
 };
 
 struct StopDumpCommand {
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
 };
 
 struct FiscalizationCommand {
     uint32_t newPassword; // in, Пароль новый (4 байта)
     uint64_t inn; // in, ИНН (6 байт) 000000000000…999999999999
     uint64_t rnm; // in, РНМ (7 байт) 00000000000000…99999999999999
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t fiscalNumber; // out, Номер фискализации (перерегистрации) (1 байт) 1…16
     uint8_t fiscalLeft; // out, Количество оставшихся перерегистраций (1 байт) 0…15
     uint16_t dayNumber; // out, Номер последней закрытой смены
@@ -222,17 +222,17 @@ struct FiscalizationCommand {
 };
 
 struct BeepCommand {
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber; // out, номер оператора
 };
 
 struct WriteLongSerialCommand {
     uint64_t serial; // in, серийный номер
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
 };
 
 struct ReadLongSerialCommand {
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint64_t serial; // out, Заводской номер (7 байт) 00000000000000…99999999999999
     uint64_t rnm; // out, РНМ (7 байт) 00000000000000…99999999999999
 };
@@ -300,7 +300,7 @@ enum PrintResult {
 };
 
 struct ReadShortStatusCommand {
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber; // out, номер оператора
     uint16_t flags; // out, Флаги ФР (2 байта)
     //PrinterFlags flags;       // out, Флаги ФР (2 байта)
@@ -311,13 +311,13 @@ struct ReadShortStatusCommand {
     double supplyVoltage; // out, Напряжение источника питания (1 байт)
     uint8_t fmError; // out, Код ошибки ФП (1 байт)
     uint8_t ejError; // out, Код ошибки ЭКЛЗ (1 байт)
-    uint8_t reserved[3]; // out, Зарезервировано (3 байта)
+    char reserved[3]; // out, Зарезервировано (3 байта)
     PrintResult printResult;
     bool validPrintResult;
 };
 
 struct ReadLongStatusCommand {
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber; // out, номер оператора
     uint16_t flags; // out, Флаги ФР (2 байта)
     uint8_t mode; // out, Режим ФР (1 байт)
@@ -345,7 +345,7 @@ struct ReadLongStatusCommand {
 struct PrintBoldCommand {
     uint8_t flags; // in, Флаги
     QString text; // Печатаемые символы (20 байт)
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber; // out, номер оператора
 };
 
@@ -353,40 +353,40 @@ struct PortParametersCommand {
     uint8_t port; // in, Номер порта
     uint32_t baudRate; // Код скорости обмена
     uint32_t timeout; // Тайм аут приема байта
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
 };
 
 struct PrintStringCommand {
     uint8_t flags; // in, Флаги
     QString text; // Печатаемые символы (20 байт)
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber; // out, номер оператора
 };
 
 struct PrintDocHeaderCommand {
     QString text; // in, Наименование документа (30 байт)
     uint16_t number; // in, Номер документа (2 байта)
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
     uint16_t documentNumber; // out, Сквозной номер документа (2 байта)
 };
 
 struct StartTestCommand {
     uint8_t periodInMinutes; // in, Период вывода в минутах (1 байт) 1…99
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct ReadCashRegCommand {
     uint8_t number; // in, Номер регистра (1 байт) 0… 255
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
     uint64_t value; // out, Содержимое регистра (6 байт)
 };
 
 struct ReadOperRegCommand {
     uint8_t number; // in, Номер регистра (1 байт) 0… 255
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
     uint16_t value; // out, Содержимое регистра (2 байта)
 };
@@ -396,28 +396,28 @@ struct TableValueCommand {
     uint16_t row; // in, Ряд (2 байта)
     uint8_t field; // in, Поле (1 байт)
     QByteArray value; // in, Значение (X байт) до 40 байт
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
 };
 
 struct TimeCommand {
     PrinterTime time; // in, Время
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
 };
 
 struct DateCommand {
     PrinterDate date; // in, Дата
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
 };
 
 struct CutCommand {
     uint8_t cutType; // in, Тип отрезки
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct ReadFontCommand {
     uint8_t fontNumber; // in, Номер шрифта
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint16_t printWidth;
     uint8_t charWidth;
     uint8_t charHeight;
@@ -433,14 +433,14 @@ struct FontInfo {
 
 struct OpenDrawerCommand {
     uint8_t number; // in, Номер денежного ящика
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct FeedPaperCommand {
     uint8_t flags;
     uint8_t count;
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
@@ -448,25 +448,25 @@ struct PrintStringFontCommand {
     uint8_t flags;
     uint8_t font;
     QString text;
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct PasswordCommand {
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct CashCommand {
     uint64_t amount; // in, Сумма (5 байт)
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
     uint16_t documentNumber; // out, Сквозной номер документа (2 байта)
 };
 
 struct PrintDocEndCommand {
     uint8_t printad; // in, Параметр (1 байт)
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
@@ -479,7 +479,7 @@ struct ReceiptItemCommand {
     uint8_t tax3; // in, Налог 3 (1 байт) «0» – нет, «1»…«4» – налоговая группа
     uint8_t tax4; // in, Налог 4 (1 байт) «0» – нет, «1»…«4» – налоговая группа
     QString text; // Текст (40 байт)
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
@@ -494,7 +494,7 @@ struct CloseReceiptCommand {
     uint8_t tax3; // in, Налог 3 (1 байт) «0» – нет, «1»…«4» – налоговая группа
     uint8_t tax4; // in, Налог 4 (1 байт) «0» – нет, «1»…«4» – налоговая группа
     QString text; // Текст (40 байт)
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
     uint64_t change; // out, Сдача (5 байт) 0000000000…9999999999
 };
@@ -512,19 +512,19 @@ struct AmountAjustCommand {
     uint8_t tax3; // in, Налог 3 (1 байт) «0» – нет, «1»…«4» – налоговая группа
     uint8_t tax4; // in, Налог 4 (1 байт) «0» – нет, «1»…«4» – налоговая группа
     QString text; // Текст (40 байт)
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct ReadSubtotalCommand {
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
     uint64_t amount; // out, Сумма чека (5 байт) 0000000000…9999999999
 };
 
 struct OpenReceiptCommand {
     uint8_t receiptType; // in, Тип чека
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
@@ -535,7 +535,7 @@ struct PrintEJDepartmentReportOnDates
     uint8_t department;     // in, Номер отдела
     PrinterDate date1;      // in, Дата первой смены
     PrinterDate date2;      // in, Дата последней смены
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
 };
 
 struct PrintEJDepartmentReportOnDays
@@ -545,7 +545,7 @@ struct PrintEJDepartmentReportOnDays
     uint16_t day1;          // in, Номер первой смены (2 байта) 0000…2100
     uint16_t day2;          // in, Номер последней смены (2 байта) 0000…2100
     PrinterDate date2;      // in, Дата последней смены
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
 };
 
 struct PrintEJDayReportOnDates
@@ -553,7 +553,7 @@ struct PrintEJDayReportOnDates
     uint8_t reportType;     // in, Тип отчета
     PrinterDate date1;      // in, Дата первой смены
     PrinterDate date2;      // in, Дата последней смены
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
 };
 
 struct PrintEJDayReportOnDays
@@ -561,30 +561,30 @@ struct PrintEJDayReportOnDays
     uint8_t reportType;     // in, Тип отчета
     uint16_t day1;          // in, Номер первой смены (2 байта) 0000…2100
     uint16_t day2;          // in, Номер последней смены (2 байта) 0000…2100
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
 };
 
 struct PrintEJDayTotal
 {
     uint16_t day;           // in, Номер смены (2 байта) 0000…2100
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
 };
 
 struct PrintEJDocument
 {
     uint32_t macNumber;     // in, Номер КПК (4 байта) 00000000…99999999
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
 };
 
 struct PrintEJDayReport
 {
     uint16_t day;           // in, Номер смены (2 байта) 0000…2100
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
 };
 
 struct ReadEJSerial
 {
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     uint64_t serial;        // out, Номер ЭКЛЗ (5 байт)
 };
 
@@ -600,7 +600,7 @@ struct EJFlags{
 
 struct ReadEJStatus1
 {
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     uint64_t docAmount;     // out, Итог документа последнего КПК (5 байт) 0000000000…9999999999
     PrinterDate docDate;    // out, Дата последнего КПК (3 байта) ДД-ММ-ГГ
     PrinterTime docTime;    // out, Время последнего КПК (2 байта) ЧЧ-ММ
@@ -611,7 +611,7 @@ struct ReadEJStatus1
 
 struct ReadEJStatus2
 {
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     uint16_t dayNumber;
     uint64_t saleTotal;
     uint64_t buyTotal;
@@ -621,25 +621,25 @@ struct ReadEJStatus2
 
 struct ReadEJJournal{
     uint16_t dayNumber;
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     QString text;
 };
 
 struct ReadEJDocument{
-    uint16_t macNumber;
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    uint32_t macNumber;
+    int resultCode;     // out, Код ошибки (1 байт)
     QString text;
 };
 
 struct ReadEJVersion
 {
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     QString version;
 };
 
 struct ReadEJDocumentLine
 {
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     QString text;
 };
 
@@ -648,7 +648,7 @@ struct ReadEJDepartmentReportByDates{
     uint8_t department;
     PrinterDate date1;
     PrinterDate date2;
-    uint8_t resultCode;
+    int resultCode;
     QString text;
 };
 
@@ -656,7 +656,7 @@ struct ReadEJReportByDates{
     uint8_t reportType;
     PrinterDate date1;
     PrinterDate date2;
-    uint8_t resultCode;
+    int resultCode;
     QString text;
 };
 
@@ -664,7 +664,7 @@ struct ReadEJReportByDays{
     uint8_t reportType;
     uint16_t day1;
     uint16_t day2;
-    uint8_t resultCode;
+    int resultCode;
     QString text;
 };
 
@@ -673,50 +673,50 @@ struct ReadEJDepartmentReportByDays{
     uint8_t department;
     uint16_t day1;
     uint16_t day2;
-    uint8_t resultCode;
+    int resultCode;
     QString text;
 };
 
 struct ReadEJDayTotals{
     uint16_t day;
-    uint8_t resultCode;
+    int resultCode;
     QString text;
 };
 
 struct ReadEJActivation{
-    uint8_t resultCode;
+    int resultCode;
     QString text;
 };
 
 struct LoadGraphicsCommand {
-    uint16_t line; // in, Номер строки
-    QByteArray data; // in, Двнные
-    uint8_t resultCode; // out, Код ошибки (1 байт)
-    uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
+    uint line;               // in, Номер строки
+    QByteArray data;         // in, Двнные
+    int resultCode;         // out, Код ошибки (1 байт)
+    uint operatorNumber;     // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct PrintGraphicsCommand {
     uint16_t line1; // in, Номер строки 1
     uint16_t line2; // in, Номер строки 2
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct PrintBarcodeCommand {
     uint64_t barcode; // in, Штрихкод
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct GraphicsLineCommand {
     uint16_t height; // in, Высота
     QByteArray data; // in, Данные
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct DeviceTypeCommand {
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t deviceType1;
     uint8_t deviceType2;
     uint8_t protocolVersion1;
@@ -731,29 +731,29 @@ struct ScaledGraphicsCommand {
     uint8_t line2;
     uint8_t vscale;
     uint8_t hscale;
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct LicenseCommand {
     uint64_t license;
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
 };
 
 struct PointCommand {
     uint8_t point;
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
 };
 
 struct SlipEjectCommand {
     uint8_t ejectDirection;
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
 struct TableInfoCommand {
     uint8_t table; // in, Номер таблицы (1 байт)
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     QString name; // out, Название таблицы (40 байт)
     uint16_t rows; // out, Количество рядов (2 байта)
     uint8_t fields; // out, Количество полей (1 байт)
@@ -762,7 +762,7 @@ struct TableInfoCommand {
 struct FieldInfoCommand {
     uint8_t table; // in, Номер таблицы (1 байт)
     uint8_t field; // in, Номер поля (1 байт)
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     QString name; // out, Название поля (40 байт)
     uint8_t type; // out, Тип поля (1 байт) «0» – BIN, «1» – CHAR
     uint8_t size; // out, Количество байт – X (1 байт)
@@ -774,9 +774,9 @@ struct FieldInfoCommand {
 struct PrinterFieldInfo{
     uint8_t table;
     uint8_t field;
-    uint8_t row;
-    uint8_t min;
-    uint8_t max;
+    uint16_t row;
+    uint64_t min;
+    uint64_t max;
     uint8_t type;
     uint8_t size;
     QString name;
@@ -791,12 +791,12 @@ struct PrinterTableInfo{
 
 struct WriteSerialCommand {
     uint32_t serial; // in, серийный номер
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
 };
 
 struct PrinterTotals {
     uint8_t type;       // in,
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint64_t saleTotal;
     uint64_t buyTotal;
     uint64_t retSaleTotal;
@@ -805,7 +805,7 @@ struct PrinterTotals {
 
 struct FMReadTotalsCommand {
     uint8_t type; // in,
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber;
     uint64_t saleTotal;
     uint64_t buyTotal;
@@ -814,7 +814,7 @@ struct FMReadTotalsCommand {
 };
 
 struct FSReadTotalsCommand {
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint64_t saleTotal;
     uint64_t buyTotal;
     uint64_t retSaleTotal;
@@ -823,14 +823,14 @@ struct FSReadTotalsCommand {
 
 
 struct FMReadLastDateCommand {
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber;
     uint8_t type; // in,
     PrinterDate date;
 };
 
 struct FMReadRangeCommand {
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     PrinterDate firstDayDate;
     PrinterDate lastDayDate;
     uint16_t firstDayNumber;
@@ -842,7 +842,7 @@ struct FMDatesReportCommand {
     PrinterDate firstDate;
     PrinterDate lastDate;
 
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     PrinterDate firstDayDate;
     PrinterDate lastDayDate;
     uint16_t firstDayNumber;
@@ -854,7 +854,7 @@ struct FMDaysReportCommand {
     uint16_t firstDay;
     uint16_t lastDay;
 
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     PrinterDate firstDayDate;
     PrinterDate lastDayDate;
     uint16_t firstDayNumber;
@@ -863,7 +863,7 @@ struct FMDaysReportCommand {
 
 struct FMReadFiscalizationCommand {
     uint8_t fiscalNumber; // in, Номер фискализации (перерегистрации) (1 байт) 1…16
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint64_t rnm; // out, РНМ (5 байт) 00000000000000…99999999999999
     uint64_t inn; // out, ИНН (6 байт) 000000000000…999999999999
     uint16_t dayNumber; // out, Номер смены до фискализации
@@ -872,14 +872,14 @@ struct FMReadFiscalizationCommand {
 
 struct FMReadCorruptedRecordsCommand {
     uint8_t recordType;     // in, Тип проверяемой записи (1 байт)
-    uint8_t resultCode;     // out, результат выполнения
+    int resultCode;     // out, результат выполнения
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт)
     uint16_t recordCount;   // out, Количество сбойных записей (2 байта)
 };
 
 struct ReadErrorTextCommand {
     uint8_t errorCode;      // in
-    uint8_t resultCode;     // out
+    int resultCode;     // out
     QString errorText;      // out
 };
 
@@ -910,7 +910,7 @@ struct SlipDocParams {
 
 struct SlipOpenDocumentCommand {
     SlipDocParams params;
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber;
     uint16_t docNumber;
 };
@@ -928,7 +928,7 @@ struct StdSlipParams {
 
 struct SlipOpenStdDocumentCommand {
     StdSlipParams params;
-    uint8_t resultCode; // out, результат выполнения
+    int resultCode; // out, результат выполнения
     uint8_t operatorNumber;
     uint16_t docNumber;
 };
@@ -972,7 +972,7 @@ struct SlipOperation {
 struct SlipPrintItemCommand {
     SlipOperationParams params;
     SlipOperation item;
-    uint8_t resultCode;
+    int resultCode;
     uint8_t operatorNumber;
 };
 
@@ -1000,7 +1000,7 @@ struct LoadGraphics3Command {
     uint16_t lineCount;
     uint8_t bufferType;
     QByteArray data; // in, Двнные
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
@@ -1010,7 +1010,7 @@ struct PrintGraphics3Command {
     uint8_t vScale;
     uint8_t hScale;
     uint8_t flags;
-    uint8_t resultCode; // out, Код ошибки (1 байт)
+    int resultCode; // out, Код ошибки (1 байт)
     uint8_t operatorNumber; // out, Порядковый номер оператора (1 байт) 1…30
 };
 
@@ -1147,7 +1147,7 @@ struct FSDocument21
 struct FSFindDocument
 {
     uint32_t docNum;            // in, Номер фискального документа: 4 байта
-    uint8_t resultCode;         // out, Код ошибки: 1 байт
+    int resultCode;         // out, Код ошибки: 1 байт
     uint8_t docType;            // out, Тип фискального документа: 1 байт
     uint8_t hasTicket;          // out, Получена ли квитанция из ОФД: 1 байт
     QByteArray docData;         // out, Данные фискального документа
@@ -1160,7 +1160,7 @@ struct FSFindDocument
 };
 
 struct FSOpenDay{
-    uint8_t resultCode;         // out, Код ошибки: 1 байт
+    int resultCode;         // out, Код ошибки: 1 байт
     uint16_t dayNum;            // out, Номер смены: 2 байта
     uint32_t docNum;            // out, Номер ФД: 4 байта
     uint32_t docMac;            // out, Фискальный признак: 4 байта
@@ -1186,7 +1186,7 @@ struct FSReadOpenParam{
 
 struct FSReadRegisters{
     uint16_t itemCode;          // in, Код товара (2 байта) 1…9999
-    uint8_t resultCode;         // out, Код ошибки: 1 байт
+    int resultCode;         // out, Код ошибки: 1 байт
     uint8_t operatorNumber;     // out, Порядковый номер оператора (1 байт) 1…30
     uint64_t registerValue[8];  // out, Значения регистров
 };
@@ -1204,19 +1204,19 @@ struct FSBufferBlock{
 
 struct FSStartWriteBuffer {
     uint16_t size;          // in, Длина данных
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     uint16_t blockSize;     // out, Размер блока
 };
 
 struct FSWriteBuffer{
     uint16_t offset;
     QByteArray block;
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
 };
 
 struct FSRefiscalization{
     uint8_t code;           // in, Код причины перерегистрации: 1 байт
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     uint32_t docNum;        // out, Номер ФД: 4 байта
     uint32_t docMac;        // out, Фискальный признак: 4 байта
 };
@@ -1224,7 +1224,7 @@ struct FSRefiscalization{
 struct FSPrintCorrection{
     uint64_t total;         // in, Итог чека: 5 байт 0000000000…9999999999
     uint8_t operation;      // in, Тип операции 1 байт
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
+    int resultCode;     // out, Код ошибки (1 байт)
     uint16_t recNum;        // out, Порядковый номер оператора (1 байт) 1…30
     uint32_t docNum;        // out, Номер ФД: 4 байта
     uint32_t docMac;        // out, Фискальный признак: 4 байта
@@ -1237,8 +1237,8 @@ struct FSPrintCorrection2{
     uint64_t payment[5];    // in, Сумма по чеку наличными:5 байт
     uint64_t taxAmount[5];  // in, Сумма налога: 5 байт
     uint8_t taxSystem;      // in, Применяемая система налогообложения:1байт
-    uint8_t resultCode;     // out, Код ошибки (1 байт)
-    uint16_t recNum;        // out, Порядковый номер оператора (1 байт) 1…30
+    int resultCode;     // out, Код ошибки (1 байт)
+    uint16_t recNum;        // out,
     uint32_t docNum;        // out, Номер ФД: 4 байта
     uint32_t docMac;        // out, Фискальный признак: 4 байта
 };
@@ -1404,7 +1404,7 @@ class PrinterField
 {
 private:
     int Id;
-    int row;
+    uint16_t row;
     QString value;
     PrinterFieldInfo info;
 public:
@@ -1427,7 +1427,7 @@ public:
         return Id;
     }
 
-    int getRow(){
+    uint16_t getRow(){
         return row;
     }
 
@@ -1600,6 +1600,9 @@ class CsvTablesReader{
 private:
     bool isComment(QString line);
     qlonglong getParamInt(QString line, int index);
+    uint getParamUInt(QString line, int index);
+    uint8_t getParamUInt8(QString line, int index);
+    uint16_t getParamUInt16(QString line, int index);
     QString getParamStr(QString line, int index);
 public:
     CsvTablesReader(){}
@@ -2196,7 +2199,7 @@ class ShtrihFiscalPrinter : public QObject {
 public:
     explicit ShtrihFiscalPrinter(QObject* parent, Logger* logger);
     virtual ~ShtrihFiscalPrinter();
-    void setTimeout(int value);
+    void setTimeout(uint value);
     bool getJournalEnabled();
     void setJournalEnabled(bool value);
     int send(PrinterCommand& command);
@@ -2249,7 +2252,7 @@ public:
     int printCashOut(CashCommand& data);
     int printHeader(PasswordCommand& data);
     int printDocEnd(PrintDocEndCommand& data);
-    int execute(int code, ReceiptItemCommand& data);
+    int execute(uint16_t code, ReceiptItemCommand& data);
     int printSale(ReceiptItemCommand& data);
     int printBuy(ReceiptItemCommand& data);
     int printRetSale(ReceiptItemCommand& data);
@@ -2260,7 +2263,7 @@ public:
     int closeReceipt2(CloseReceiptCommand2& data);
     int printDiscount(AmountAjustCommand& data);
     int printCharge(AmountAjustCommand& data);
-    int printAmountAjustment(int code, AmountAjustCommand& data);
+    int printAmountAjustment(uint16_t code, AmountAjustCommand& data);
     int cancelReceipt(PasswordCommand& data);
     int readSubtotal(ReadSubtotalCommand& data);
     int printDiscountStorno(AmountAjustCommand& data);
@@ -2290,7 +2293,7 @@ public:
     int resetFM(int& resultCode);
     int fmReadTotals(FMReadTotalsCommand& data);
     int fsReadTotals(FSReadTotalsCommand& data);
-    int fsReadDocCount(int& docCount);
+    int fsReadDocCount(uint16_t& docCount);
 
     int readTotals(PrinterTotals& data);
     int fmReadLastDate(FMReadLastDateCommand& data);
@@ -2313,16 +2316,16 @@ public:
 
     QString getModeText(int value);
     QString getSubmodeText(int value);
-    static QString getErrorText2(int code);
+    static QString getErrorText2(uint8_t code);
     static QString getErrorText(int code);
     static QString getErrorTextFS(int code);
     static QString getFSErrorText(int code);
 
-    QString getDeviceCodeText(DeviceCode code);
-    int getTimeoutCode(int value);
-    int getTimeoutValue(int value);
-    int getBaudRateValue(int value);
-    int getBaudRateCode(int value);
+    QString getDeviceCodeText(int code);
+    uint8_t getTimeoutCode(uint value);
+    uint getTimeoutValue(uint8_t value);
+    uint getBaudRateValue(uint8_t value);
+    uint8_t getBaudRateCode(uint value);
     void setProtocol(PrinterProtocol* protocol);
     int waitForPrinting();
     void checkEcrMode(int mode);
@@ -2330,9 +2333,9 @@ public:
     int loadImage(const QString& fileName);
     int loadImage(QImage& image);
     int printImage(QImage image);
-    int printImage(int imageIndex);
+    int printImage(uint imageIndex);
     int printImage(PrinterImage image);
-    int printImage(int startLine, int endLine);
+    int printImage(uint16_t startLine, uint16_t endLine);
     int loadImage1(QImage& image);
     int loadImage2(QImage& image);
     int loadImage3(QImage& image);
@@ -2341,22 +2344,22 @@ public:
     int printImage3(QImage& image);
 
     void clearImages();
-    int getImageCount();
-    int getStartLine();
+    uint getImageCount();
+    uint16_t getStartLine();
     int getMaxGraphicsWidth();
     int getMaxGraphicsHeight();
     void addImage(PrinterImage image);
     QImage alignImage(QImage image, int width);
     QString getVersion();
-    int readLineLength(int font);
-    int getLineLength(int font);
+    int readLineLength(uint8_t font);
+    int getLineLength(uint8_t font);
     int printLine(QString text);
     int printTextSplit(QString& text);
     int printText(QString text);
-    QStringList splitText(QString text, int font);
+    QStringList splitText(QString text, uint8_t font);
     int resetPrinter();
     bool isDayOpened();
-    void setMaxRetryCount(int value);
+    void setMaxRetryCount(uint32_t value);
 
     int openFiscalDay();
     void writeFields(QString fileName);
@@ -2372,7 +2375,7 @@ public:
     void check(int resultCode);
     QStringList readHeader();
     QStringList readTrailer();
-    QString readPaymentName(int number);
+    QString readPaymentName(uint8_t number);
     bool readTrailerEnabled();
     QStringList getHeader();
     QStringList getTrailer();
@@ -2414,15 +2417,15 @@ public:
     void sendBlocks();
     bool sendBlock(QByteArray block, QByteArray& result);
     int getPrinterField(uint8_t table, uint16_t row, uint8_t field, PrinterField& printerField);
-    void setPollInterval(int value);
+    void setPollInterval(uint32_t value);
     void lock();
     void unlock();
     int fsReadStatus(FSStatus& status);
     int fsReadSerial(QString& serial);
     int fsReadExpDate(PrinterDate& date);
     int fsReadVersion(FSVersion& version);
-    int fsStartFiscalization(int reportType);
-    int fsReset(int code);
+    int fsStartFiscalization(uint8_t reportType);
+    int fsReset(uint8_t code);
     int fsCancelDocument();
     int fsReadFiscalization(FSReadFiscalization& data);
     int fsFindDocument(FSFindDocument& data);
@@ -2491,7 +2494,11 @@ public:
     FSDocument21 decodeDocument21(QByteArray data);
     Logger* getLogger();
     int correctDate();
-    int readDate(QDateTime printerDate);
+    int readDate(QDateTime& printerDate);
+    int writeDateTime(QDateTime dt);
+    int writeCurrentDateTime();
+    int readDocument(FSDocumentInfo& doc, QByteArray& data);
+    int readDocumentTLV(QByteArray& data);
 private:
     Logger* logger;
     QMutex* mutex;
@@ -2505,11 +2512,11 @@ private:
     DeviceTypeCommand deviceType;
     JournalPrinter* journal;
 
-    bool connected;
-    int pollInterval;
     bool stopFlag;
+    bool connected;
     bool fdoThreadEnabled;
-    uint32_t timeout;
+    uint timeout;
+    uint32_t pollInterval;
     uint32_t maxRetryCount;
     uint32_t usrPassword;
     uint32_t sysPassword;
@@ -2523,7 +2530,7 @@ private:
     bool capPrintGraphics1;
     bool capPrintGraphics2;
     bool capPrintGraphics3;
-    int startLine;
+    uint16_t startLine;
     uint8_t numHeaderRow;
     uint8_t numTrailerRow;
     uint8_t numHeaderLines;
@@ -2537,10 +2544,10 @@ private:
     QStringList header;
     QStringList trailer;
 public:
-    int sleepTimeInMs;
+    uint sleepTimeInMs;
     bool userNameEnabled;
     bool printTagsEnabled;
-    uint32_t lineLength[10];
+    int lineLength[10];
     uint32_t validTimeDiffInSecs;
     PrinterAlignment imageAlignment;
 

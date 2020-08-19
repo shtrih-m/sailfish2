@@ -11,15 +11,15 @@
  * Created on June 29, 2016, 9:51 PM
  */
 
-#include <QByteArray>
-#include <QDebug>
-#include <QElapsedTimer>
-#include <QThread>
 #include <QTime>
+#include <QDebug>
+#include <QThread>
+#include <QByteArray>
+#include <QElapsedTimer>
 
-#include "SocketPort.h"
 #include "utils.h"
 #include "logger.h"
+#include "socketport.h"
 
 SocketPort::SocketPort(std::string address, int port, Logger* logger)
 {

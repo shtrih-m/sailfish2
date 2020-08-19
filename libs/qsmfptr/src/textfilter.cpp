@@ -6,7 +6,7 @@
 #include "src/shtrihfiscalprinter.h"
 
 uint64_t round2(double value){
-    return (value + 0.5);
+    return  static_cast<uint64_t>(value + 0.5);
 }
 
 QString amountToStr(uint64_t value)
@@ -255,7 +255,7 @@ void TextFilter::printCashIn(uint8_t event, CashCommand& data)
 void TextFilter::printCashOut(uint8_t event, CashCommand& data){
     if (event == EVENT_AFTER){
         operatorNumber = data.operatorNumber;
-        uint64_t docNumber = printer->readOperationRegister(156);
+        uint16_t docNumber = printer->readOperationRegister(156);
 
         beginDocument();
         add(SCashOutText, getDocumentNumber(docNumber));
@@ -410,7 +410,7 @@ void TextFilter::closeReceipt(uint8_t event, CloseReceiptCommand& data)
             // ВСЕГО
             add(STotalText, summToStr(receiptTotal));
             // СКИДКА
-            long discountAmount = round2(receiptTotal * data.discount / 100.0);
+            uint64_t discountAmount = round2(receiptTotal * data.discount / 100.0);
             QString line = QString(SDiscountText) + " " + amountToStr(data.discount) + "%";
             add(line, summToStr(discountAmount)
                     + getTaxText(data.tax1, data.tax2, data.tax3, data.tax4));
@@ -609,14 +609,14 @@ XReport TextFilter::readXReport()
     report.xReportNumber = printer->readOperationRegister(158) + 1;
     report.zReportNumber = printer->readDayNumber() + 1;
 
-    for (int i = 0; i <= 3; i++)
+    for (uint8_t i = 0; i <= 3; i++)
     {
         Receipt receipt;
         receipt.number = printer->readOperationRegister(148 + i);
         receipt.count = printer->readOperationRegister(144 + i);
-        long total = 0;
-        for (int j = 0; j <= 3; j++) {
-            long amount = printer->readCashRegister(193 + i + j * 4);
+        uint64_t total = 0;
+        for (uint8_t j = 0; j <= 3; j++) {
+            uint64_t amount = printer->readCashRegister(193 + i + j * 4);
             total = total + amount;
             receipt.payments[j].amount = amount;
             receipt.payments[j].text = paymentNames[j];
@@ -640,7 +640,7 @@ XReport TextFilter::readXReport()
             report.receipts[3].total;
     report.salesAmount = report.salesAmountBefore + report.receipts[0].total;
     report.buyAmount = report.buyAmountBefore + report.receipts[1].total;
-    for (int i = 0; i <= 3; i++) {
+    for (uint8_t i = 0; i <= 3; i++) {
         report.voidedReceipts[i].count = printer->readOperationRegister(179 + i);
         report.voidedReceipts[i].total = printer->readCashRegister(249 + i);
     }

@@ -65,6 +65,8 @@ int BluetoothPort2::connectToDevice()
         if (sk < 0) {
             logger->write("Failed to create RFCOMM socket");
             return SMFPTR_E_NOCONNECTION;
+        } else{
+            logger->write("RFCOMM socket created.");
         }
 
         ::fcntl(sk, F_SETFL, O_NONBLOCK);
@@ -89,6 +91,8 @@ int BluetoothPort2::connectToDevice()
                 logger->write("Connected to RFCOMM socket!");
                 isConnected = true;
                 return rc;
+            } else{
+                logger->write("Select failed");
             }
         }
         logger->write("Failed to connect RFCOMM socket");

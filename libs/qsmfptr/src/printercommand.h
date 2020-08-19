@@ -26,9 +26,9 @@ public:
     virtual ~PrinterCommand();
 
     void warn(int resultCode);
-    void write8(uint8_t value);
-    void write16(uint16_t value);
-    void write32(uint32_t value);
+    void write8(uint value);
+    void write16(uint value);
+    void write32(uint value);
     void write(uint64_t value, int len);
     void write(QString text);
     void write(QByteArray data);
@@ -37,7 +37,7 @@ public:
     void writeStr(char* buf, int len);
     void writeStr(QString text, int len);
 
-    uint8_t readChar();
+    char readChar();
     uint8_t read8();
     uint16_t read16();
     uint32_t read32();

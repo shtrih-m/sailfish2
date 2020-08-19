@@ -45,6 +45,21 @@ qlonglong CsvTablesReader::getParamInt(QString line, int index)
     return getParamStr(line, index).toLongLong();
 }
 
+uint CsvTablesReader::getParamUInt(QString line, int index)
+{
+    return getParamStr(line, index).toUInt();
+}
+
+uint8_t CsvTablesReader::getParamUInt8(QString line, int index)
+{
+    return static_cast<uint8_t>(getParamStr(line, index).toUShort());
+}
+
+uint16_t CsvTablesReader::getParamUInt16(QString line, int index)
+{
+    return static_cast<uint16_t>(getParamStr(line, index).toUShort());
+}
+
 QString CsvTablesReader::getParamStr(QString line, int index)
 {
     QString result = "";
@@ -97,13 +112,13 @@ void CsvTablesReader::load(QString fileName, PrinterFields fields)
         } else
         {
             PrinterFieldInfo fieldInfo;
-            fieldInfo.table = getParamInt(line, 0);
-            fieldInfo.row = getParamInt(line, 1);
-            fieldInfo.field = getParamInt(line, 2);
-            fieldInfo.size = getParamInt(line, 3);
-            fieldInfo.type = getParamInt(line, 4);
-            fieldInfo.min = getParamInt(line, 5);
-            fieldInfo.max = getParamInt(line, 6);
+            fieldInfo.table = getParamUInt8(line, 0);
+            fieldInfo.row = getParamUInt16(line, 1);
+            fieldInfo.field = getParamUInt8(line, 2);
+            fieldInfo.size = getParamUInt8(line, 3);
+            fieldInfo.type = getParamUInt8(line, 4);
+            fieldInfo.min = getParamUInt(line, 5);
+            fieldInfo.max = getParamUInt(line, 6);
             fieldInfo.name = getParamStr(line, 7);
             QString fieldValue = getParamStr(line, 8);
 
@@ -152,7 +167,7 @@ ShtrihFiscalPrinter::ShtrihFiscalPrinter(QObject* parent, Logger* logger)
     userName = "";
     sleepTimeInMs = 1000;
     connected = false;
-    thread = NULL;
+    thread = nullptr;
 
     filter = new PrinterFilter();
     journal = new JournalPrinter("journal.txt");
@@ -212,16 +227,16 @@ void ShtrihFiscalPrinter::unlock(){
     mutex->unlock();
 }
 
-void ShtrihFiscalPrinter::setPollInterval(int value){
+void ShtrihFiscalPrinter::setPollInterval(uint32_t value){
     this->pollInterval = value;
 }
 
-void ShtrihFiscalPrinter::setMaxRetryCount(int value)
+void ShtrihFiscalPrinter::setMaxRetryCount(uint32_t value)
 {
     this->maxRetryCount = value;
 }
 
-void ShtrihFiscalPrinter::setTimeout(int value)
+void ShtrihFiscalPrinter::setTimeout(uint value)
 {
     this->timeout = value;
 }
@@ -252,8 +267,25 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
         logger->writeTx(command.encode());
 
         lock();
-        try{
-            rc = protocol->send(command);
+        try
+        {
+            rc = 0;
+            /*
+            // correct date in some points
+            switch (command.getCode())
+            {
+                case 0xE0:      // open fiscal day
+                case 0x41:      // close fiscal day
+                case 0x8D:      // open receipt
+                case 0x85:      // close receipt
+                case 0xFF45:    // close receipt ex
+                    rc = correctDate();
+                    break;
+            }
+            */
+            if (succeeded(rc)) {
+                rc = protocol->send(command);
+            }
             unlock();
         }
             catch(QException exception)
@@ -263,7 +295,7 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
             exception.raise();
         }
         logger->writeRx(command.getRxData());
-        if (rc == 0) break;
+        if (succeeded(rc)) break;
 
         logger->write(QString("ERROR: %1").arg(getErrorText2(rc)));
 
@@ -271,7 +303,7 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
         case 0x50: {
             QSleepThread::msleep(sleepTimeInMs);
             rc = waitForPrinting();
-            if (rc != 0)
+            if (failed(rc))
                 return rc;
             break;
         }
@@ -279,10 +311,10 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
         case 0x58: {
             PasswordCommand command;
             rc = continuePrint(command);
-            if (rc != 0)
+            if (failed(rc))
                 return rc;
             rc = waitForPrinting();
-            if (rc != 0)
+            if (failed(rc))
                 return rc;
             break;
         }
@@ -300,16 +332,21 @@ int ShtrihFiscalPrinter::waitForPrinting()
     while (true) {
         ReadShortStatusCommand command;
         rc = readShortStatus(command);
-        if (rc != 0)
+        if (failed(rc))
             break;
 
         switch (command.submode) {
-        case ECR_SUBMODE_IDLE: {
+        case ECR_SUBMODE_IDLE:
+        {
             switch (command.mode) {
             case MODE_FULLREPORT:
             case MODE_EJREPORT:
             case MODE_SLPPRINT:
                 QSleepThread::msleep(sleepTimeInMs);
+                break;
+
+            case MODE_TECH:
+                rc = writeCurrentDateTime();
                 break;
             }
             return rc;
@@ -345,7 +382,9 @@ int ShtrihFiscalPrinter::connectDevice()
     rc = readDeviceType(deviceType);
     if (failed(rc)) return rc;
 
-    int lineNumber = 1;
+    /* !!!
+     *
+    uint16_t lineNumber = 1;
     LoadGraphicsCommand loadCommand;
     loadCommand.line = lineNumber;
     capLoadGraphics1 = loadGraphics1(loadCommand) == 0;
@@ -370,8 +409,15 @@ int ShtrihFiscalPrinter::connectDevice()
     command.vScale = 1;
     command.hScale = 1;
     command.flags = 2;
-    capPrintGraphics2 = printGraphics3(command) == 0;
+    capPrintGraphics3 = printGraphics3(command) == 0;
 
+    logger->write(QString("capLoadGraphics1: %1").arg(capLoadGraphics1));
+    logger->write(QString("capLoadGraphics2: %1").arg(capLoadGraphics2));
+    logger->write(QString("capLoadGraphics3: %1").arg(capLoadGraphics3));
+    logger->write(QString("capPrintGraphics1: %1").arg(capPrintGraphics1));
+    logger->write(QString("capPrintGraphics2: %1").arg(capPrintGraphics2));
+    logger->write(QString("capPrintGraphics3: %1").arg(capPrintGraphics3));
+    */
 
     if (userNameEnabled && (deviceType.model == 19))
     {
@@ -382,12 +428,6 @@ int ShtrihFiscalPrinter::connectDevice()
     {
         startFDOThread();
     }
-    logger->write(QString("capLoadGraphics1: %1").arg(capLoadGraphics1));
-    logger->write(QString("capLoadGraphics2: %1").arg(capLoadGraphics2));
-    logger->write(QString("capLoadGraphics3: %1").arg(capLoadGraphics3));
-    logger->write(QString("capPrintGraphics1: %1").arg(capPrintGraphics1));
-    logger->write(QString("capPrintGraphics2: %1").arg(capPrintGraphics2));
-    logger->write(QString("capPrintGraphics3: %1").arg(capPrintGraphics3));
     connected = true;
     return rc;
 }
@@ -407,13 +447,13 @@ void ShtrihFiscalPrinter::disconnectDevice()
 
 void ShtrihFiscalPrinter::startFDOThread()
 {
-    if (thread == NULL)
+    if (thread == nullptr)
     {
         logger->write("startFDOThread");
         // read FDO server parameters
         serverParams.address = readTableStr(15, 1, 1);
         serverParams.port = readTableStr(15, 1, 2).toInt();
-        pollInterval = readTableStr(15, 1, 3).toInt()*1000;
+        pollInterval = readTableStr(15, 1, 3).toUInt()*1000;
         serverParams.connectTimeout = 20000;
         serverParams.readTimeout = 100000;
         serverParams.writeTimeout = 20000;
@@ -436,12 +476,12 @@ void ShtrihFiscalPrinter::startFDOThread()
 
 void ShtrihFiscalPrinter::stopFDOThread()
 {
-    if (thread != NULL)
+    if (thread != nullptr)
     {
         stopFlag = true;
         thread->quit();
         thread->wait();
-        thread = NULL;
+        thread = nullptr;
     }
 }
 
@@ -473,7 +513,7 @@ void ShtrihFiscalPrinter::sendBlocks()
 {
     QByteArray block;
     QByteArray answer;
-    int docCount = 0;
+    uint16_t docCount = 0;
     while ((fsReadDocCount(docCount) == 0)&&(docCount > 0))
     {
         logger->write(QString("docCount: %1").arg(docCount));
@@ -502,7 +542,7 @@ bool ShtrihFiscalPrinter::sendBlock(QByteArray block, QByteArray& result)
     {
         return false;
     }
-    memcpy(&header, result.data(), result.length());
+    memcpy(&header, result.data(), static_cast<uint>(result.length()));
     if (header.size > 0)
     {
         if (!connection.read(header.size, readBlock)){
@@ -524,7 +564,7 @@ int ShtrihFiscalPrinter::writeBlock(QByteArray block)
     lock();
 
     FSStartWriteBuffer startCommand;
-    startCommand.size = block.size();
+    startCommand.size = static_cast<uint16_t>(block.size());
     rc = fsStartWriteBuffer(startCommand);
     if (failed(rc)) {
         unlock();
@@ -545,7 +585,7 @@ int ShtrihFiscalPrinter::writeBlock(QByteArray block)
 
         FSWriteBuffer dataBlock;
         dataBlock.block = block.left(bsize);
-        dataBlock.offset = i * blockSize;
+        dataBlock.offset = static_cast<uint16_t>(i * blockSize);
         rc = fsWriteBuffer(dataBlock);
         if (failed(rc)) {
             logger->write("writeBlock failed");
@@ -578,19 +618,19 @@ bool ShtrihFiscalPrinter::readBlock(QByteArray& block)
         return false;
     }
 
-    int blockSize = 64;
+    uint8_t blockSize = 64;
     if ((bufferStatus.blockSize > 0)&&(bufferStatus.blockSize < 240)){
         blockSize = bufferStatus.blockSize;
     }
-    int bytesToRead = bufferStatus.dataSize;
+    uint16_t bytesToRead = bufferStatus.dataSize;
     int blockCount = (bufferStatus.dataSize + blockSize-1)/blockSize;
     for (int i=0;i<blockCount;i++)
     {
         FSBufferBlock dataBlock;
-        dataBlock.offset = i * blockSize;
+        dataBlock.offset = static_cast<uint16_t>(i * blockSize);
         dataBlock.size = blockSize;
         if (bytesToRead < blockSize){
-            dataBlock.size = bytesToRead;
+            dataBlock.size = static_cast<uint8_t>(bytesToRead);
         }
         rc = fsReadBufferBlock(dataBlock);
         if (failed(rc)) {
@@ -668,9 +708,9 @@ int ShtrihFiscalPrinter::readDump(ReadDumpCommand& data)
     command.write(sysPassword, 4);
     data.resultCode = send(command);
     if (succeeded(data.resultCode)) {
-        data.deviceCode = (DeviceCode)command.readChar();
+        data.deviceCode = static_cast<DeviceCode>(command.readChar());
         data.blockNumber = command.readShort();
-        command.read((char*)data.blockData, sizeof(data.blockData));
+        command.read(static_cast<char*>(data.blockData), sizeof(data.blockData));
     }
     return data.resultCode;
 }
@@ -810,7 +850,7 @@ int ShtrihFiscalPrinter::readShortStatus(ReadShortStatusCommand& data)
         data.fmError = command.readChar();
         data.ejError = command.readChar();
         data.numOperations += (command.readChar() << 8);
-        command.read((char*)data.reserved, sizeof(data.reserved));
+        command.read(data.reserved, sizeof(data.reserved));
     }
     return data.resultCode;
 }
@@ -871,7 +911,7 @@ int ShtrihFiscalPrinter::readLongStatus(ReadLongStatusCommand& data)
         data.date = command.readDate();
         data.time = command.readTime();
         data.fmFlags = command.readChar();
-        data.serialNumber = command.read(4);
+        data.serialNumber = command.read32();
         data.dayNumber = command.readShort();
         data.fmFreeRecords = command.readShort();
         data.registrationNumber = command.readChar();
@@ -1211,7 +1251,7 @@ int ShtrihFiscalPrinter::writeTableStr(uint8_t table, uint16_t row,
 
     PrinterField printerField;
     int rc = getPrinterField(table, row, field, printerField);
-    if (rc == 0)
+    if (succeeded(rc))
     {
         printerField.setValue(value);
 
@@ -1222,7 +1262,7 @@ int ShtrihFiscalPrinter::writeTableStr(uint8_t table, uint16_t row,
         command.value = printerField.getBinary();
         rc = writeTable(command);
     }
-    if (rc == 0)
+    if (succeeded(rc))
     {
         filter->writeTableStr(EVENT_AFTER, table, row, field, value);
         if ((table == SMFP_TABLE_TEXT)&&(field == 1))
@@ -1321,7 +1361,7 @@ int ShtrihFiscalPrinter::writeTime(TimeCommand& data)
 
 int ShtrihFiscalPrinter::writeDate(DateCommand& data)
 {
-    logger->write("write");
+    logger->write("writeDate");
 
     PrinterCommand command(0x22);
     command.write(sysPassword, 4);
@@ -2338,7 +2378,7 @@ int ShtrihFiscalPrinter::fmReadCorruptedRecords(FMReadCorruptedRecordsCommand& d
     command.write(data.recordType, 1);
     data.resultCode = send(command);
     if (succeeded(data.resultCode)) {
-        data.operatorNumber = command.read(1);
+        data.operatorNumber = command.read8();
         data.recordCount = command.readShort();
     }
     return data.resultCode;
@@ -2870,19 +2910,19 @@ int ShtrihFiscalPrinter::printLine(QString text)
     return printString(command);
 }
 
-int ShtrihFiscalPrinter::readLineLength(int font)
+int ShtrihFiscalPrinter::readLineLength(uint8_t font)
 {
     int len = 40;
     ReadFontCommand command;
     command.fontNumber = font;
     int rc = readFont(command);
-    if ((rc == 0) && (command.charWidth != 0)) {
+    if ((succeeded(rc)) && (command.charWidth != 0)) {
         len = command.printWidth / command.charWidth;
     }
     return len;
 }
 
-int ShtrihFiscalPrinter::getLineLength(int font)
+int ShtrihFiscalPrinter::getLineLength(uint8_t font)
 {
     int len = 40;
     if ((font >= 1) && (font <= 10)) {
@@ -2895,7 +2935,7 @@ int ShtrihFiscalPrinter::getLineLength(int font)
     return len;
 }
 
-QStringList ShtrihFiscalPrinter::splitText(QString text, int font)
+QStringList ShtrihFiscalPrinter::splitText(QString text, uint8_t font)
 {
     logger->write("splitText");
     int lineLength = getLineLength(font);
@@ -2922,7 +2962,7 @@ int ShtrihFiscalPrinter::printTextSplit(QString& text)
         return 0;
     while (lines.length() > 1) {
         rc = printLine(lines[0]);
-        if (rc != 0)
+        if (failed(rc))
             break;
         lines.removeAt(0);
     }
@@ -2939,12 +2979,13 @@ int ShtrihFiscalPrinter::printText(QString text)
             break;
 
         rc = printLine(str);
-        if (rc != 0) break;
+        if (failed(rc))
+            break;
     }
     return rc;
 }
 
-int ShtrihFiscalPrinter::execute(int code, ReceiptItemCommand& data)
+int ShtrihFiscalPrinter::execute(uint16_t code, ReceiptItemCommand& data)
 {
     data.resultCode = printTextSplit(data.text);
     if (failed(data.resultCode)) {
@@ -3246,7 +3287,7 @@ int ShtrihFiscalPrinter::printCharge(AmountAjustCommand& data)
     return data.resultCode;
 }
 
-int ShtrihFiscalPrinter::printAmountAjustment(int code, AmountAjustCommand& data)
+int ShtrihFiscalPrinter::printAmountAjustment(uint16_t code, AmountAjustCommand& data)
 {
     PrinterCommand command(code);
     command.write(usrPassword, 4);
@@ -3738,9 +3779,9 @@ int ShtrihFiscalPrinter::readEJStatus1(ReadEJStatus1& data)
         data.docAmount = command.read(5);
         data.docDate = command.readDate();
         data.docTime = command.readTime2();
-        data.macNumber = command.read(4);
+        data.macNumber = command.read32();
         data.serial = command.read(5);
-        data.flags = decodeEJFlags(command.read(1));
+        data.flags = decodeEJFlags(command.read8());
     }
     return data.resultCode;
 }
@@ -3765,7 +3806,7 @@ int ShtrihFiscalPrinter::readEJStatus2(ReadEJStatus2& data)
     command.write(sysPassword, 4);
     data.resultCode = send(command);
     if (succeeded(data.resultCode)){
-        data.dayNumber = command.read(2);
+        data.dayNumber = command.read16();
         data.saleTotal = command.read(6);
         data.buyTotal = command.read(6);
         data.retSaleTotal = command.read(6);
@@ -3895,7 +3936,7 @@ int ShtrihFiscalPrinter::readEJDocument(ReadEJDocument& data)
     logger->write("readEJDocument");
     PrinterCommand command(0xB5);
     command.write(sysPassword, 4);
-    command.write(data.macNumber, 2);
+    command.write(data.macNumber, 4);
     data.resultCode = send(command);
     if (succeeded(data.resultCode)){
         data.text = command.readStr();
@@ -4546,7 +4587,7 @@ int ShtrihFiscalPrinter::fsReadTotals(FSReadTotalsCommand& data)
     return data.resultCode;
 }
 
-int ShtrihFiscalPrinter::getBaudRateCode(int value)
+uint8_t ShtrihFiscalPrinter::getBaudRateCode(uint value)
 {
     switch (value) {
     case 2400:
@@ -4568,7 +4609,7 @@ int ShtrihFiscalPrinter::getBaudRateCode(int value)
     }
 }
 
-int ShtrihFiscalPrinter::getBaudRateValue(int value)
+uint ShtrihFiscalPrinter::getBaudRateValue(uint8_t value)
 {
     switch (value) {
     case 0:
@@ -4590,20 +4631,20 @@ int ShtrihFiscalPrinter::getBaudRateValue(int value)
     }
 }
 
-int ShtrihFiscalPrinter::getTimeoutCode(int value)
+uint8_t ShtrihFiscalPrinter::getTimeoutCode(uint value)
 {
-    if ((value >= 0) && (value <= 150)) {
-        return value;
+    if (value <= 150) {
+        return value & 0xFF;
     }
     if ((value > 150) && (value <= 15000)) {
-        return ((value / 150) + 149);
+        return ((value / 150) + 149) & 0xFF;
     }
-    return ((value / 15000) + 248);
+    return ((value / 15000) + 248) & 0xFF;
 }
 
-int ShtrihFiscalPrinter::getTimeoutValue(int value)
+uint ShtrihFiscalPrinter::getTimeoutValue(uint8_t value)
 {
-    if ((value >= 0) && (value <= 150)) {
+    if (value <= 150) {
         return value;
     }
     if ((value > 150) && (value <= 249)) {
@@ -4612,7 +4653,7 @@ int ShtrihFiscalPrinter::getTimeoutValue(int value)
     return (value - 248) * 15000;
 }
 
-QString ShtrihFiscalPrinter::getErrorText2(int code)
+QString ShtrihFiscalPrinter::getErrorText2(uint8_t code)
 {
     QByteArray ba;
     ba.append(code);
@@ -5046,7 +5087,7 @@ QString ShtrihFiscalPrinter::getErrorText(int code)
     }
 }
 
-QString ShtrihFiscalPrinter::getDeviceCodeText(DeviceCode code)
+QString ShtrihFiscalPrinter::getDeviceCodeText(int code)
 {
     switch (code) {
     case FMStorage1:
@@ -5227,7 +5268,7 @@ int ShtrihFiscalPrinter::loadImage(QImage& image)
     return SMFPTR_E_NOGRAPHICS;
 }
 
-int ShtrihFiscalPrinter::getStartLine()
+uint16_t ShtrihFiscalPrinter::getStartLine()
 {
     return startLine;
 }
@@ -5276,12 +5317,12 @@ int ShtrihFiscalPrinter::loadImage1(QImage& image)
     }
 
     int rc = 0;
-    int startLine = getStartLine();
+    uint16_t startLine = getStartLine();
     LoadGraphicsCommand command;
     for (int i = 0; i < image.height(); i++) {
         const char* buf = (const char*)image.scanLine(i);
         QByteArray ba(buf, image.bytesPerLine());
-        command.line = i + startLine;
+        command.line = (uint16_t)(i + startLine);
         command.data = ba;
         rc = loadGraphics1(command);
         if (failed(rc))
@@ -5289,7 +5330,7 @@ int ShtrihFiscalPrinter::loadImage1(QImage& image)
     }
     PrinterImage pimage;
     pimage.startLine = startLine;
-    pimage.height = image.height();
+    pimage.height = (uint16_t)image.height();
     addImage(pimage);
     return rc;
 }
@@ -5309,12 +5350,12 @@ int ShtrihFiscalPrinter::loadImage2(QImage& image)
     }
 
     int rc = 0;
-    int startLine = getStartLine();
+    uint16_t startLine = getStartLine();
     LoadGraphicsCommand command;
     for (int i = 0; i < image.height(); i++) {
         const char* buf = (const char*)image.scanLine(i);
         QByteArray ba(buf, image.bytesPerLine());
-        command.line = i + startLine;
+        command.line = (uint16_t)(i + startLine);
         command.data = ba;
         rc = loadGraphics2(command);
         if (failed(rc))
@@ -5340,14 +5381,14 @@ int ShtrihFiscalPrinter::loadImage3(QImage& image)
         return SMFPTR_E_LARGEWIDTH;
     }
 
-    int linesPerCommand = 240 / image.bytesPerLine();
-    int count = (image.height() + linesPerCommand - 1) / linesPerCommand;
-    int startLine = getStartLine();
-    int row = 0;
-    for (int i = 0; i < count; i++) {
-        int rowCount = 0;
+    uint linesPerCommand = (uint)(240 / image.bytesPerLine());
+    uint count = (uint)(image.height() + linesPerCommand - 1) / linesPerCommand;
+    uint16_t startLine = getStartLine();
+    uint16_t row = 0;
+    for (uint i = 0; i < count; i++) {
+        uint16_t rowCount = 0;
         QByteArray ba;
-        for (int j = 0; j < linesPerCommand; j++) {
+        for (uint j = 0; j < linesPerCommand; j++) {
 
             QByteArray scanLine((const char*)image.scanLine(row), image.bytesPerLine());
             ba.append(scanLine);
@@ -5358,7 +5399,7 @@ int ShtrihFiscalPrinter::loadImage3(QImage& image)
             }
         }
         LoadGraphics3Command command;
-        command.lineLength = image.bytesPerLine();
+        command.lineLength = (uint8_t)image.bytesPerLine();
         command.startLine = startLine;
         command.lineCount = rowCount;
         command.bufferType = 1;
@@ -5370,7 +5411,7 @@ int ShtrihFiscalPrinter::loadImage3(QImage& image)
     }
     PrinterImage pimage;
     pimage.startLine = startLine;
-    pimage.height = image.height();
+    pimage.height = static_cast<uint16_t>(image.height());
     addImage(pimage);
     return rc;
 }
@@ -5387,7 +5428,7 @@ void ShtrihFiscalPrinter::clearImages()
     images.clear();
 }
 
-int ShtrihFiscalPrinter::getImageCount()
+uint ShtrihFiscalPrinter::getImageCount()
 {
     return images.size();
 }
@@ -5458,7 +5499,7 @@ int ShtrihFiscalPrinter::printImage3(QImage& image)
     return rc;
 }
 
-int ShtrihFiscalPrinter::printImage(int imageIndex)
+int ShtrihFiscalPrinter::printImage(uint imageIndex)
 {
     return printImage(images.at(imageIndex));
 }
@@ -5473,7 +5514,7 @@ QString ShtrihFiscalPrinter::getVersion()
     return "1.8";
 }
 
-int ShtrihFiscalPrinter::printImage(int startLine, int endLine)
+int ShtrihFiscalPrinter::printImage(uint16_t startLine, uint16_t endLine)
 {
     PrintGraphicsCommand command;
     command.line1 = startLine;
@@ -5485,7 +5526,8 @@ bool ShtrihFiscalPrinter::isDayOpened()
 {
     ReadShortStatusCommand command;
     int rc = readShortStatus(command);
-    if (rc != 0) return false;
+    if (failed(rc))
+        return false;
     int mode = command.mode & 0x0F;
     if ((mode == MODE_REC) || (mode == MODE_24NOTOVER) || (mode == MODE_24OVER)) {
         return true;
@@ -5495,16 +5537,96 @@ bool ShtrihFiscalPrinter::isDayOpened()
 
 int ShtrihFiscalPrinter::resetPrinter()
 {
-    ReadShortStatusCommand command;
-    int rc = readShortStatus(command);
-    if (rc != 0)
+    int rc;
+    // before cancel receipt to fix
+    rc = waitForPrinting();
+    if (failed(rc))
         return rc;
-    if ((command.mode & 0x0F) == MODE_REC) {
-        PasswordCommand command;
-        rc = cancelReceipt(command);
-        if (rc != 0)
-            return rc;
-        rc = waitForPrinting();
+
+    ReadShortStatusCommand command;
+    rc = readShortStatus(command);
+    if (failed(rc))
+        return rc;
+
+    int mode = command.mode & 0x0F;
+    switch (mode)
+    {
+        case MODE_DUMPMODE:
+        {
+            QByteArray data;
+            rc = readDocumentTLV(data);
+            break;
+        }
+
+        case MODE_WAITDATE:
+        {
+            ReadLongStatusCommand status;
+            rc = readLongStatus(status);
+            if (failed(rc)) return rc;
+
+            DateCommand datecmd;
+            datecmd.date = status.date;
+            rc = confirmDate(datecmd);
+            break;
+        }
+
+        case MODE_REC:
+        {
+            PasswordCommand command;
+            rc = cancelReceipt(command);
+            if (failed(rc))
+                return rc;
+
+            rc = waitForPrinting();
+            break;
+        }
+
+        case MODE_TECH:
+        {
+            rc = writeCurrentDateTime();
+            break;
+        }
+
+        case MODE_TEST:
+        {
+            PasswordCommand cmd;
+            rc = stopTest(cmd);
+            if (failed(rc))
+                return rc;
+
+            rc = waitForPrinting();
+            break;
+        }
+    }
+    if (failed(rc))
+        return rc;
+    rc = correctDate();
+    return rc;
+}
+
+int ShtrihFiscalPrinter::readDocument(FSDocumentInfo& doc, QByteArray& data)
+{
+    logger->write("readDocument");
+
+    int rc = fsReadDocument(doc);
+    if (failed(rc)) return rc;
+
+    rc = readDocumentTLV(data);
+    return rc;
+}
+
+int ShtrihFiscalPrinter::readDocumentTLV(QByteArray& data)
+{
+    int rc = 0;
+    data.clear();
+    QByteArray block;
+    for(;;){
+        rc = fsReadDocumentTLV(block);
+        if (succeeded(rc)){
+            data.append(block);
+            if (block.isEmpty()) break;
+        }
+        if (failed(rc)) break;
     }
     return rc;
 }
@@ -5670,7 +5792,7 @@ QStringList ShtrihFiscalPrinter::getTrailer()
 QStringList ShtrihFiscalPrinter::readHeader(){
 
     QStringList header;
-    for (int i = 0; i < numHeaderLines; i++)
+    for (uint8_t i = 0; i < numHeaderLines; i++)
     {
         header.append(readTableStr(SMFP_TABLE_TEXT, i + numHeaderRow, 1));
     }
@@ -5687,7 +5809,7 @@ QStringList ShtrihFiscalPrinter::readTrailer()
     QStringList trailer;
     if (readTrailerEnabled())
     {
-        for (int i = 0; i < numTrailerLines; i++)
+        for (uint8_t i = 0; i < numTrailerLines; i++)
         {
             trailer.append(readTableStr(SMFP_TABLE_TEXT, i + numTrailerRow, 1));
         }
@@ -5695,7 +5817,7 @@ QStringList ShtrihFiscalPrinter::readTrailer()
     return trailer;
 }
 
-QString ShtrihFiscalPrinter::readPaymentName(int number)
+QString ShtrihFiscalPrinter::readPaymentName(uint8_t number)
 {
     return readTableStr(SMFP_TABLE_PAYTYPE, number, 1);
 }
@@ -5753,8 +5875,9 @@ int ShtrihFiscalPrinter::fsReadStatus(FSStatus& status)
     PrinterCommand command(0xFF01);
     command.write(sysPassword, 4);
     int rc = send(command);
-    if (rc == 0){
-        int v = command.read8();
+    if (succeeded(rc))
+    {
+        uint8_t v = command.read8();
         status.mode.value = v;
         status.mode.isConfigured = testBit(v, 0);
         status.mode.isFiscalOpened = testBit(v, 1);
@@ -5794,7 +5917,8 @@ int ShtrihFiscalPrinter::fsReadSerial(QString& serial){
     PrinterCommand command(0xFF02);
     command.write(sysPassword, 4);
     int rc = send(command);
-    if (rc == 0){
+    if (succeeded(rc))
+    {
         serial = command.readStr(16).trimmed();
     }
     return rc;
@@ -5814,7 +5938,8 @@ int ShtrihFiscalPrinter::fsReadExpDate(PrinterDate& date){
     PrinterCommand command(0xFF03);
     command.write(sysPassword, 4);
     int rc = send(command);
-    if (rc == 0){
+    if (succeeded(rc))
+    {
         date = command.readDate2();
     }
     return rc;
@@ -5837,7 +5962,8 @@ int ShtrihFiscalPrinter::fsReadVersion(FSVersion& version){
     PrinterCommand command(0xFF04);
     command.write(sysPassword, 4);
     int rc = send(command);
-    if (rc == 0){
+    if (succeeded(rc))
+    {
         version.text = command.readStr(16).trimmed();
         version.isRelease = command.read8() > 0;
     }
@@ -5856,7 +5982,7 @@ int ShtrihFiscalPrinter::fsReadVersion(FSVersion& version){
     Код ошибки: 1 байт
 ***************************************************************************/
 
-int ShtrihFiscalPrinter::fsStartFiscalization(int reportType){
+int ShtrihFiscalPrinter::fsStartFiscalization(uint8_t reportType){
     logger->write("fsStartFiscalization");
     PrinterCommand command(0xFF05);
     command.write(sysPassword, 4);
@@ -5891,7 +6017,8 @@ int ShtrihFiscalPrinter::fsPrintFiscalization(FSPrintFiscalization& data){
     command.write8(data.taxMode);
     command.write8(data.workMode);
     int rc = send(command);
-    if (rc == 0){
+    if (succeeded(rc))
+    {
         data.docNum = command.read32();
         data.docMac = command.read32();
     }
@@ -5911,7 +6038,7 @@ int ShtrihFiscalPrinter::fsPrintFiscalization(FSPrintFiscalization& data){
 
 ***************************************************************************/
 
-int ShtrihFiscalPrinter::fsReset(int code){
+int ShtrihFiscalPrinter::fsReset(uint8_t code){
     logger->write("fsReset");
     PrinterCommand command(0xFF07);
     command.write(sysPassword, 4);
@@ -6150,6 +6277,7 @@ int ShtrihFiscalPrinter::fsReadOpenParam(FSReadOpenParam& data){
     if (succeeded(rc)){
         data.data = command.readBytes();
     }
+    return rc;
 }
 
 
@@ -6296,7 +6424,7 @@ int ShtrihFiscalPrinter::fsWriteBuffer(FSWriteBuffer& data)
     PrinterCommand command(0xFF33);
     command.write(sysPassword, 4);
     command.write16(data.offset);
-    command.write8(data.block.size());
+    command.write8(static_cast<uint8_t>(data.block.size()));
     command.write(data.block);
     data.resultCode = send(command);
     return data.resultCode;
@@ -6369,7 +6497,7 @@ int ShtrihFiscalPrinter::fsPrintCorrection(FSPrintCorrection& data)
     command.write8(data.operation);
     data.resultCode = send(command);
     if (data.resultCode == 0){
-        data.recNum = command.read32();
+        data.recNum = command.read16();
         data.docNum = command.read32();
         data.docMac = command.read32();
     }
@@ -6943,7 +7071,7 @@ int ShtrihFiscalPrinter::fsPrintCorrection2(FSPrintCorrection2& data)
     command.write(data.taxSystem, 1);
     int resultCode = send(command);
     if (resultCode == 0){
-        data.recNum = command.read32();
+        data.recNum = command.read16();
         data.docNum = command.read32();
         data.docMac = command.read32();
     }
@@ -6984,7 +7112,7 @@ int ShtrihFiscalPrinter::fsWriteTag(uint16_t tagId, QString tagValue){
     QByteArray ba = list.getData();
 
     int rc = fsWriteTLV(ba);
-    if ((rc == 0) && printTagsEnabled)
+    if ((succeeded(rc)) && printTagsEnabled)
     {
         printTag(tagId, tagValue);
     }
@@ -7004,7 +7132,7 @@ int ShtrihFiscalPrinter::printTag(uint16_t tagId, QString tagValue)
 {
     int rc = 0;
     TlvTag* tlvTag = tlvTags.find(tagId);
-    if (tlvTag != NULL)
+    if (tlvTag != nullptr)
     {
         QString text = tlvTag->shortDescription;
         text.append(": " + tagValue);
@@ -7050,7 +7178,7 @@ int ShtrihFiscalPrinter::fsWriteTLVOperation(QByteArray& data)
     Количество неподтверждённых ФД : 2 байта
 *****************************************************************************/
 
-int ShtrihFiscalPrinter::fsReadDocCount(int& docCount)
+int ShtrihFiscalPrinter::fsReadDocCount(uint16_t& docCount)
 {
     //logger->write("fsReadDocCount");
 
@@ -7058,7 +7186,7 @@ int ShtrihFiscalPrinter::fsReadDocCount(int& docCount)
     command.write(sysPassword, 4);
     int resultCode = send(command);
     if (succeeded(resultCode)) {
-        docCount = command.read(2);
+        docCount = command.read16();
     }
     return resultCode;
 }
@@ -7203,6 +7331,8 @@ QString ShtrihFiscalPrinter::readParameter(int ParamId)
                 fsSerialNumber = readTableStr(18,1,4);
             }
         }
+        return fsSerialNumber;
+
     case FPTR_PARAMETER_HEADER_ENABLED:
     {
         if (isShtrihMobile()){
@@ -7230,11 +7360,13 @@ int ShtrihFiscalPrinter::writeParameter(int ParamId, QString value)
         } else{
             rc = writeTableStr(1,1,39,value);
         }
+        break;
     }
 
     default: rc = SMFPTR_E_INVALID_PARAM_ID;
     }
-    if (rc == 0){
+    if (succeeded(rc))
+    {
         filter->writeParameter(EVENT_AFTER, ParamId, value);
     }
     return rc;
@@ -7509,7 +7641,7 @@ bool ShtrihFiscalPrinter::canRepeatCommand(uint16_t commandCode)
   return false;
 }
 
-int ShtrihFiscalPrinter::readDate(QDateTime printerDate)
+int ShtrihFiscalPrinter::readDate(QDateTime& printerDate)
 {
     ReadLongStatusCommand status;
     int rc = readLongStatus(status);
@@ -7526,7 +7658,7 @@ int ShtrihFiscalPrinter::readDate(QDateTime printerDate)
 // check fiscal printer date
 int ShtrihFiscalPrinter::correctDate()
 {
-    logger->write("checkDate");
+    logger->write("correctDate");
 
     if (validTimeDiffInSecs <= 0) return 0;
 
@@ -7538,24 +7670,34 @@ int ShtrihFiscalPrinter::correctDate()
 
     if (timeDiffInSecs > validTimeDiffInSecs)
     {
-        if (printerDate.date() != currentDate.date()){
-            DateCommand dc;
-            dc.date.day = currentDate.date().day();
-            dc.date.month = currentDate.date().month();
-            dc.date.year = currentDate.date().year() % 100;
-            rc = writeDate(dc);
-            if (succeeded(rc)){
-                rc = confirmDate(dc);
-            }
-            if (succeeded(rc))
-            {
-                TimeCommand tc;
-                tc.time.hour = currentDate.time().hour();
-                tc.time.min = currentDate.time().minute();
-                tc.time.sec = currentDate.time().second();
-                rc = writeTime(tc);
-            }
-        }
+        writeDateTime(currentDate);
+    }
+    return rc;
+}
+
+int ShtrihFiscalPrinter::writeCurrentDateTime(){
+    return writeDateTime(QDateTime::currentDateTime());
+}
+
+int ShtrihFiscalPrinter::writeDateTime(QDateTime dt)
+{
+    logger->write("writeDateTime");
+
+    DateCommand dc;
+    dc.date.day = dt.date().day();
+    dc.date.month = dt.date().month();
+    dc.date.year = dt.date().year() % 100;
+    int rc = writeDate(dc);
+    if (succeeded(rc)){
+        rc = confirmDate(dc);
+    }
+    if (succeeded(rc))
+    {
+        TimeCommand tc;
+        tc.time.hour = dt.time().hour();
+        tc.time.min = dt.time().minute();
+        tc.time.sec = dt.time().second();
+        rc = writeTime(tc);
     }
     return rc;
 }
