@@ -59,14 +59,158 @@ void PrinterTest::show(QStringList lines)
     }
 }
 
+int PrinterTest::readMode()
+{
+    ReadShortStatusCommand status;
+    check(printer->readShortStatus(status));
+    return status.mode;
+}
+
+void PrinterTest::checkMode(int mode)
+{
+    if ((readMode() & 0x0F) != mode){
+        throw new TextException("Invalid ECR mode");
+    }
+}
+
+void testDate()
+{
+    QDate date(2020, 2, 1);
+    qDebug() << "1. date: " << date.toString();
+    qDebug() << "1. date.isValid: " << date.isValid();
+    qDebug() << "1. Day: " << date.day();
+    qDebug() << "1. Month: " << date.month();
+    qDebug() << "1. Year: " << date.year();
+
+    QDateTime datetime(date);
+    qDebug() << "1. datetime: " << datetime.toString();
+    qDebug() << "1. datetime.isValid: " << datetime.isValid();
+    qDebug() << "2. Day: " << datetime.date().day();
+    qDebug() << "2. Month: " << datetime.date().month();
+    qDebug() << "2. Year: " << datetime.date().year();
+}
+
 void PrinterTest::execute()
 {
     qDebug("PrinterTest::execute");
 
     connectPrinter();
-    check(printer->resetPrinter());
+    //testResetPrinter();
+    //testCorrectDate();
+    testCorrectDate2();
     disconnectPrinter();
+}
 
+void checkEquals(int64_t v1, int64_t v2, QString text)
+{
+    if (v1 != v2){
+        throw TextException(text);
+    }
+}
+
+void PrinterTest::testCorrectDate()
+{
+    qDebug("testCorrectDate");
+    setModeClosed();
+    // set invalid date
+    QDateTime datetime(QDate(2020, 2, 1));
+    check(printer->writeDateTime(datetime));
+    // test that date is set
+    ReadLongStatusCommand status;
+    check(printer->readLongStatus(status));
+    checkEquals(1, status.date.day, "status.date.day");
+    checkEquals(2, status.date.month, "status.date.month");
+    checkEquals(20, status.date.year, "status.date.year");
+    // correctDate must correct date
+    check(printer->correctDate());
+    QDateTime printerDate;
+    check(printer->readDate(printerDate));
+    int timeDiffInSecs = printerDate.secsTo(QDateTime::currentDateTime());
+    qDebug() << "timeDiffInSecs: " << timeDiffInSecs << " seconds";
+    if (timeDiffInSecs > 60){
+        throw new TextException("correctDate failed");
+    }
+    qDebug("testCorrectDate: OK");
+}
+
+void PrinterTest::testCorrectDate2()
+{
+    qDebug("testCorrectDate2");
+    setModeClosed();
+    // set invalid date
+    QDateTime datetime(QDate(2020, 2, 1));
+    check(printer->writeDateTime(datetime));
+    check(printer->openFiscalDay());
+    // test printer date
+    QDateTime printerDate;
+    check(printer->readDate(printerDate));
+    int timeDiffInSecs = printerDate.secsTo(QDateTime::currentDateTime());
+    qDebug() << "timeDiffInSecs: " << timeDiffInSecs << " seconds";
+    if (timeDiffInSecs > 30){
+        throw new TextException("correctDate failed");
+    }
+    qDebug("testCorrectDate2: OK");
+}
+
+void PrinterTest::testResetPrinter()
+{
+    setModeClosed();
+    // test DUMP_MODE
+    qDebug("test DUMP_MODE");
+    FSDocumentInfo doc;
+    doc.docNum = 1;
+    check(printer->fsReadDocument(doc));
+    checkMode(MODE_DUMPMODE);
+    check(printer->resetPrinter());
+    checkMode(MODE_CLOSED);
+    qDebug("test DUMP_MODE: OK");
+
+    // test MODE_WAITDATE mode
+    qDebug("test MODE_WAITDATE");
+    ReadLongStatusCommand status;
+    check(printer->readLongStatus(status));
+    DateCommand datecmd;
+    datecmd.date = status.date;
+    check(printer->writeDate(datecmd));
+    checkMode(MODE_WAITDATE);
+    check(printer->resetPrinter());
+    checkMode(MODE_CLOSED);
+    qDebug("test MODE_WAITDATE: OK");
+
+    // test MODE_TEST mode
+    qDebug("test MODE_TEST");
+    StartTestCommand startcmd;
+    startcmd.periodInMinutes = 10;
+    check(printer->startTest(startcmd));
+    check(printer->waitForPrinting());
+    checkMode(MODE_TEST);
+    check(printer->resetPrinter());
+    checkMode(MODE_CLOSED);
+    qDebug("test MODE_TEST: OK");
+
+    // test MODE_REC mode
+    qDebug("test MODE_REC");
+    OpenReceiptCommand opencmd;
+    opencmd.receiptType = 1;
+    check(printer->openReceipt(opencmd));
+    check(printer->waitForPrinting());
+    checkMode(MODE_REC);
+    check(printer->resetPrinter());
+    checkMode(MODE_24NOTOVER);
+    qDebug("test MODE_REC: OK");
+}
+
+void PrinterTest::setModeClosed()
+{
+    check(printer->resetPrinter());
+    int mode = readMode();
+    if ((mode == MODE_24OVER)||(mode == MODE_24NOTOVER))
+    {
+        PasswordCommand cmd;
+        check(printer->printZReport(cmd));
+        check(printer->waitForPrinting());
+    }
+    checkMode(MODE_CLOSED);
 }
 
 void PrinterTest::testWriteTLVOperation()

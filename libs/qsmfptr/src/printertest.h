@@ -1,3 +1,4 @@
+
 #ifndef PRINTERTEST_H
 #define PRINTERTEST_H
 
@@ -6,6 +7,7 @@
 #include <QBluetoothLocalDevice>
 #include <QBluetoothServiceInfo>
 
+#include "printertest.h"
 #include "shtrihfiscalprinter.h"
 #include "bluetoothport2.h"
 #include "printerprotocol1.h"
@@ -38,6 +40,12 @@ private:
     QBluetoothLocalDevice localDevice;
     QBluetoothDeviceDiscoveryAgent discoveryAgent;
 
+    int readMode();
+    void setModeClosed();
+    void checkMode(int mode);
+    void testCorrectDate();
+    void testCorrectDate2();
+    void testResetPrinter();
     void testSale2();
     void testWriteTLVOperation();
     void testHeaderTrailer();

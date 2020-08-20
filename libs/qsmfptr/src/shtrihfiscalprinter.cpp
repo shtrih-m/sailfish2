@@ -264,27 +264,19 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
             logger->write(QString("retry %1").arg(i));
         }
 
-        logger->writeTx(command.encode());
-
         lock();
         try
         {
             rc = 0;
-            /*
-            // correct date in some points
-            switch (command.getCode())
-            {
-                case 0xE0:      // open fiscal day
-                case 0x41:      // close fiscal day
-                case 0x8D:      // open receipt
-                case 0x85:      // close receipt
-                case 0xFF45:    // close receipt ex
-                    rc = correctDate();
-                    break;
+            // correct date before open fiscal day
+            if (command.getCode() == 0xE0){
+                rc = correctDate();
             }
-            */
+
             if (succeeded(rc)) {
+                logger->writeTx(command.encode());
                 rc = protocol->send(command);
+                logger->writeRx(command.getRxData());
             }
             unlock();
         }
@@ -294,7 +286,6 @@ int ShtrihFiscalPrinter::send(PrinterCommand& command)
             //if (!canRepeatCommand(command.getCode())){
             exception.raise();
         }
-        logger->writeRx(command.getRxData());
         if (succeeded(rc)) break;
 
         logger->write(QString("ERROR: %1").arg(getErrorText2(rc)));
@@ -1341,7 +1332,7 @@ int ShtrihFiscalPrinter::writePoint(PointCommand& data)
 
 int ShtrihFiscalPrinter::writeTime(TimeCommand& data)
 {
-    logger->write("write");
+    logger->write("writeTime");
 
     PrinterCommand command(0x21);
     command.write(sysPassword, 4);
