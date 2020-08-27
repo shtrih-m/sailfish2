@@ -4578,6 +4578,15 @@ int ShtrihFiscalPrinter::fsReadTotals(FSReadTotalsCommand& data)
     return data.resultCode;
 }
 
+int ShtrihFiscalPrinter::rebootPrinter()
+{
+    logger->write("rebootPrinter");
+    PrinterCommand command(0xFE);
+    command.write(0xF3, 1);
+    command.write(0, 4);
+    return send(command);
+}
+
 uint8_t ShtrihFiscalPrinter::getBaudRateCode(uint value)
 {
     switch (value) {
@@ -6696,6 +6705,27 @@ int ShtrihFiscalPrinter::fsClose(FSDocument& data)
     return resultCode;
 }
 
+/*****************************************************************************
+Запрос количества ФД на которые нет квитанции FF3FH
+Код команды FF3Fh . Длина сообщения: 6 байт.
+    Пароль системного администратора: 4 байта
+Ответ:	    FF3Fh Длина сообщения: 3 байт.
+    Код ошибки: 1 байт
+    Количество неподтверждённых ФД : 2 байта
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::fsReadDocCount(uint16_t& docCount)
+{
+    logger->write("fsReadDocCount");
+    PrinterCommand command(0xFF3F);
+    command.write(sysPassword, 4);
+    int resultCode = send(command);
+    if (succeeded(resultCode)) {
+        docCount = command.read16();
+    }
+    return resultCode;
+}
+
 /***************************************************************************
 Запрос количества ФД на которые нет квитанции
 Код команды FF3Fh . Длина сообщения: 6 байт.
@@ -7015,6 +7045,7 @@ int ShtrihFiscalPrinter::fsPrintSale2(FSSale2& data)
     return rc;
 }
 
+
 /***************************************************************************
 
 Сформировать чек коррекции V2 FF4AH
@@ -7141,6 +7172,63 @@ void ShtrihFiscalPrinter::setServerParams(ServerParams value){
 }
 
 /*****************************************************************************
+Запрос итогов фискализации (перерегистрации) V2 FF4CH
+
+Код команды FF4Ch. Длина сообщения: 7 байт.
+    Пароль системного администратора: 4 байта
+    Номер перерегистрации: 1 байт
+
+Ответ для ФФД 1.0 и 1.05:    FF4Ch Длина сообщения: 49 байт.
+    Код ошибки: 1 байт
+    Дата и время: 5 байт DATE_TIME
+    ИНН: 12 байт ASCII
+    Регистрационный номер ККT: 20 байт ASCII
+    Код налогообложения: 1 байт
+    Режим работы: 1 байт
+    Код причины перерегистрации1: 1 байт
+    Номер ФД: 4 байта
+    Фискальный признак: 4 байта
+
+Ответ для ФФД 1.1:    FF4Сh Длина сообщения: 65 байт.
+    Код ошибки: 1 байт
+    Дата и время: 5 байт DATE_TIME
+    ИНН: 12 байт ASCII
+    Регистрационный номер ККT: 20 байт ASCII
+    Код налогообложения: 1 байт
+    Режим работы: 1 байт
+    Расширенные признаки работы ККТ: 1 байт
+    ИНН ОФД: 12 байт ASCII
+    Код причины изменения сведений о ККТ:4 байта
+    Номер ФД: 4 байта
+    Фискальный признак: 4 байта
+    Примечание:
+    1 – поле возвращается для отчетов перерегистраций,
+    если параметр номер перерегистации не равен 1.
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::fsReadFiscalization2(FSReadFiscalization2& data)
+{
+    logger->write("fsReadFiscalization");
+    PrinterCommand command(0xFF4C);
+    command.write(sysPassword, 4);
+    command.write8(data.fiscNum);
+    int rc = send(command);
+    if (rc == 0)
+    {
+        data.date = command.readDate2();
+        data.time = command.readTime2();
+        data.inn = command.readStr(12).trimmed();
+        data.rnm = command.readStr(20).trimmed();
+        data.taxSystem = command.read8();
+        data.workMode = command.read8();
+        data.regCode = command.read8();
+        data.docNum = command.read32();
+        data.docMac = command.read32();
+    }
+    return rc;
+}
+
+/*****************************************************************************
  *
 Передать произвольную TLV структуру привязанную к операции FF4DH.
     Код команды FF4DH. Длина сообщения: 6+N байт.
@@ -7161,25 +7249,272 @@ int ShtrihFiscalPrinter::fsWriteTLVOperation(QByteArray& data)
 }
 
 /*****************************************************************************
-Запрос количества ФД на которые нет квитанции FF3FH
-Код команды FF3Fh . Длина сообщения: 6 байт.
+Запись блока данных прошивки  ФР на SD карту FF4EH
+
+Код команды FF4Eh. Длина сообщения: 137 байт.
     Пароль системного администратора: 4 байта
-Ответ:	    FF3Fh Длина сообщения: 3 байт.
+    Файл прошивки: 1 байт (0- загрузчик, 1 – прошивка)
+    Номер блока: 2 байта
+    Блок данных: 128 байт.
+Ответ: FF4E Длина сообщения: 1 байт.
     Код ошибки: 1 байт
-    Количество неподтверждённых ФД : 2 байта
 *****************************************************************************/
 
-int ShtrihFiscalPrinter::fsReadDocCount(uint16_t& docCount)
+int ShtrihFiscalPrinter::writeSDCard(WriteSDCard& data)
 {
-    //logger->write("fsReadDocCount");
+    logger->write("writeSDCard");
+    PrinterCommand command(0xFF4E);
+    command.write32(sysPassword);
+    command.write8(data.type);
+    command.write16(data.number);
+    command.write(data.data);
+    return send(command);
+}
 
-    PrinterCommand command(0xFF3F);
-    command.write(sysPassword, 4);
-    int resultCode = send(command);
-    if (succeeded(resultCode)) {
-        docCount = command.read16();
+/*****************************************************************************
+Онлайн платёж FF50H
+
+Код команды FF50h. Длина сообщения: 254 байт.
+    Система оплаты: 1 байт (1 – моби)
+    Тип транзакции: 1 байт
+        1 - оплата,
+        2 – возврат,
+        3 – отмена,
+        4 – безусловная отмена
+    Тип ввода: 1 байт
+        0 – ручной ввод,
+        1 – одномерный ШК,
+        2 – двухмерный ШК
+    Сумма: 5 байт
+    Идентификатор платежа: null-терминированная строка до 226 байт
+
+Ответ: FF50 Длина сообщения: 1 байт.
+    Код ошибки: 1 байт
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::onlinePayment(OnlinePayment& data)
+{
+    logger->write("onlinePayment");
+    PrinterCommand command(0xFF50);
+    command.write8(data.paymentSystem);
+    command.write8(data.transactionType);
+    command.write8(data.barcodeInputType);
+    command.write(data.summ, 5);
+    command.write(data.paymentId);
+    data.resultCode = send(command);
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Статус онлайн платежа FF51H
+Код команды FF51h. Длина сообщения: 1 байт.
+Ответ: FF51 Длина сообщения: 254 байт.
+    Код ошибки: 1 байт
+    Система оплаты: 1 байт (1 – моби)
+    Тип транзакции: 1 байт
+        1 - оплата,
+        2 – возврат,
+        3 – отмена,
+        4 – безусловная отмена
+    Сумма: 5 байт
+    Статус транзакции: 1 байт
+        0 - неизвестно,
+        1 – принят к проведению,
+        2 – ожидание получения статуса,
+        3 – успешно завершено,
+        4 – завершилось неудачей
+    Идентификатор платежа: null-терминированная строка до 226 байт
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::readPaymentStatus(OnlinePayment& data)
+{
+    logger->write("readPaymentStatus");
+    PrinterCommand command(0xFF51);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)){
+        data.paymentSystem = command.read8();
+        data.transactionType = command.read8();
+        data.barcodeInputType = command.read8();
+        data.summ = command.read(5);
+        data.paymentId = command.readStr();
     }
-    return resultCode;
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Получить реквизит последнего онлайн платежа FF52H
+
+Код команды FF52h.  Длина сообщения: 1 байт.
+    Номер реквизита: 1 байт (FEh – описание последней ошибки, остальные реквизиты зависят от платёжной системы. См. соотв. таблицу)
+Ответ:	 FF52h Длина сообщения: 254 байт.
+    Код ошибки: 1 байт
+    Текстовое представление реквизита: null-терминированная строка до 226 байт
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::readPaymentProperty(ReadPaymentProperty& data)
+{
+    logger->write("readPaymentProperty");
+    PrinterCommand command(0xFF52);
+    command.write8(data.propertyNumber);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode)){
+        data.propertyText = command.readStr();
+    }
+    return data.resultCode;
+}
+
+/*****************************************************************************
+Передача в ФН  TLV из буфера FF64H
+Код команды FF64h. Длина сообщения: 6 байт.
+    Пароль системного администратора: 4 байта
+Ответ: FF64h Длина сообщения: 1 байт.
+    Код ошибки: 1 байт
+    Примечание:
+    Позволяет передать в ФН предварительно загруженную в буфер TLV структуру.
+    Позволяет передать TLV длиннее 250 байт.
+    Буфер тот же что и для проверки маркировки
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::fsWriteTLVBuffer()
+{
+    logger->write("fsWriteTLVBuffer");
+    PrinterCommand command(0xFF64);
+    command.write32(sysPassword);
+    return send(command);
+}
+
+/*****************************************************************************
+Получить случайную последовательность FF65H
+Код команды FF65h. Длина сообщения: 6 байт.
+    Пароль: 4 байта
+Ответ: FF65h Длина сообщения: 17 байт.
+    Код ошибки: 1 байт
+    Данные:16  Байт
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::genRandomData(QByteArray& data)
+{
+    logger->write("genRandomSequence");
+    PrinterCommand command(0xFF65);
+    command.write32(sysPassword);
+    int rc = send(command);
+    if (succeeded(rc)){
+        data = command.readBytes();
+    }
+    return rc;
+}
+
+/*****************************************************************************
+Авторизоваться  FF66H
+
+Код команды FF66h. Длина сообщения: 22 байт.
+    Пароль: 4 байта
+    Данные для авторизации: 16 байт
+
+Ответ: FF66h Длина сообщения: 1 байт.
+    Код ошибки: 1 байт
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::authorize(QByteArray data)
+{
+    logger->write("authorize");
+    PrinterCommand command(0xFF66);
+    command.write32(sysPassword);
+    command.write(data, 16);
+    return send(command);
+}
+
+/*****************************************************************************
+Привязка  маркированного товара к позиции FF67H
+
+Код команды FF67h. Длина сообщения: 5+N байт.
+    Пароль оператора: 4 байта
+    Длина кода маркировки: 1 байт
+    Данные маркировки N байт
+    Данная команда должна вызываться после привязки всех тегов к предмету расчета.
+
+Ответ: FF67h	    Длина сообщения: 4 байт.
+    Код ошибки: 1 байт
+    первые 2 байта значения реквизита "код товара”: 2 байта,
+    Тип Data Matrix: 1 байт.
+        0 – КМ 88,
+        1 - КМ симметричный,
+        2 - КМ Табачный,
+        3 - КМ 44.
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::fsSendItemBarcode(FSSendItemBarcode& data)
+{
+    logger->write("fsSendItemBarcode");
+    PrinterCommand command(0xFF67);
+    command.write32(usrPassword);
+    command.write8(data.barcode.length());
+    command.write(data.barcode);
+    data.resultCode = send(command);
+    if (succeeded(data.resultCode))
+    {
+        data.itemCode = command.read16();
+        data.codeType = command.read8();
+    }
+}
+
+/*****************************************************************************
+Получить статус информационного обмена с АС «Серверы СКЗКМ» FF68H
+
+Код команды FF68h. Длина сообщения: 6 байт.
+    Пароль оператора: 4 байта
+
+Ответ: FF68h	    Длина сообщения: 18 байт.
+    Код ошибки: 1 байт
+    Состояние транспортного соединения : 1 байт
+    Статус чтения сообщения для ИСМ : 1 байт
+    Количество сообщений «Отчет об изменении статуса» в очереди : 2 байта
+    Номер сообщения для ИСМ : 4 байта
+    Дата-время документа для ИСМ : 5 байт
+    Размер свободной области для хранения «Отчет об изменении статуса» в килобайтах : 4 байта
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::readKMServerStatus(KMServerStatus& data)
+{
+    logger->write("readKMServerStatus");
+    PrinterCommand command(0xFF68);
+    command.write32(usrPassword);
+    int rc = send(command);
+    if (succeeded(rc))
+    {
+        data.exchangeState = command.read8();
+        data.readState = command.read8();
+        data.numberMessages = command.read16();
+        data.numberFirstDocumentQueue = command.read32();
+        data.dateTimeFirstDocumentQueue = command.readDateTime2();
+        data.freeSize = command.read32();
+    }
+}
+
+/*****************************************************************************
+Принять или отвергнуть введенный код маркировки FF69H
+
+Код команды FF69h. Длина сообщения: 7 байт.
+    Пароль оператора: 4 байта
+    Решение : 1 байт. 0 – отвергнуть, 1 – принять.
+    Команду необходимо подавать после проверки каждого КМ.
+
+Ответ: FF69h	    Длина сообщения: 1 байт.
+    Код ошибки: 1 байт
+*****************************************************************************/
+
+int ShtrihFiscalPrinter::acceptDeclineBarcode(bool accept)
+{
+    logger->write("acceptDeclineBarcode");
+    PrinterCommand command(0xFF69);
+    command.write32(usrPassword);
+    if (accept){
+        command.write8(1);
+    } else {
+        command.write8(0);
+
+    }
+    return send(command);
 }
 
 int ShtrihFiscalPrinter::readTotals(PrinterTotals& data){

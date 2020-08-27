@@ -95,8 +95,8 @@ void PrinterTest::execute()
     qDebug("PrinterTest::execute");
 
     connectPrinter();
-    //testResetPrinter();
-    //testCorrectDate();
+    testResetPrinter();
+    testCorrectDate();
     testCorrectDate2();
     disconnectPrinter();
 }

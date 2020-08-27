@@ -1070,6 +1070,20 @@ struct FSReadFiscalization{
     uint32_t docMac;            // out, Фискальный признак: 4 байта
 };
 
+struct FSReadFiscalization2
+{
+    uint8_t fiscNum;            // in,
+    PrinterDate date;           // out, Дата и время: 5 байт DATE_TIME
+    PrinterTime time;
+    QString inn;                // out, ИНН : 12 байт ASCII
+    QString rnm;                // out, Регистрационный номер ККT: 20 байт ASCII
+    uint8_t taxSystem;          // out, Код налогообложения: 1 байт
+    uint8_t workMode;           // out, Режим работы: 1 байт
+    uint8_t regCode;            // out, Код причины перерегистрации2: 1 байт
+    uint32_t docNum;            // out, Номер ФД: 4 байта
+    uint32_t docMac;            // out, Фискальный признак: 4 байта
+};
+
 struct FSPrintFiscalization{
     QString INN;                // in, ИНН : 12 байт ASCII
     QString RNM;                // in, Регистрационный номер ККТ: 20 байт ASCII
@@ -1398,6 +1412,47 @@ struct ModelParameters {
   uint8_t Graphics512WidthInBytes;
   uint16_t Graphics512MaxHeight;
   PrinterParametersFlags flags;
+};
+
+struct WriteSDCard {
+    uint8_t type;       // Файл прошивки: 1 байт (0- загрузчик, 1 – прошивка)
+    uint16_t number;    // Номер блока: 2 байта
+    QByteArray data;   // Блок данных: 128 байт.
+};
+
+//commands iface
+struct OnlinePayment
+{
+  uint8_t paymentSystem;
+  uint8_t transactionType;
+  uint8_t barcodeInputType;
+  uint64_t summ;
+  QString paymentId;
+  int resultCode;
+};
+
+struct ReadPaymentProperty{
+    uint8_t propertyNumber; // Номер реквизита: 1 байт
+    int resultCode;
+    QString propertyText;   // Текстовое представление реквизита
+};
+
+struct FSSendItemBarcode
+{
+    QByteArray barcode;
+    uint8_t resultCode;
+    uint16_t itemCode;
+    uint8_t codeType;
+};
+
+struct KMServerStatus
+{
+  uint8_t           exchangeState;
+  uint8_t           readState;
+  uint16_t          numberMessages;
+  uint32_t          numberFirstDocumentQueue;
+  PrinterDateTime   dateTimeFirstDocumentQueue;
+  uint32_t          freeSize;
 };
 
 class PrinterField
@@ -2428,6 +2483,7 @@ public:
     int fsReset(uint8_t code);
     int fsCancelDocument();
     int fsReadFiscalization(FSReadFiscalization& data);
+    int fsReadFiscalization2(FSReadFiscalization2& data);
     int fsFindDocument(FSFindDocument& data);
     int fsOpenDay(FSOpenDay& data);
     int fsWriteTLV(QByteArray& data);
@@ -2499,6 +2555,17 @@ public:
     int writeCurrentDateTime();
     int readDocument(FSDocumentInfo& doc, QByteArray& data);
     int readDocumentTLV(QByteArray& data);
+    int writeSDCard(WriteSDCard& data);
+    int onlinePayment(OnlinePayment& data);
+    int readPaymentStatus(OnlinePayment& data);
+    int readPaymentProperty(ReadPaymentProperty& data);
+    int fsWriteTLVBuffer();
+    int genRandomData(QByteArray& data);
+    int authorize(QByteArray data);
+    int fsSendItemBarcode(FSSendItemBarcode& data);
+    int readKMServerStatus(KMServerStatus& data);
+    int acceptDeclineBarcode(bool accept);
+    int rebootPrinter();
 private:
     Logger* logger;
     QMutex* mutex;

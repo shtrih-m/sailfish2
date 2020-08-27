@@ -48,6 +48,8 @@ public:
     PrinterDate readDate2();
     PrinterTime readTime();
     PrinterTime readTime2();
+    PrinterDateTime readDateTime();
+    PrinterDateTime readDateTime2();
     void write(PrinterTime time);
     void write(PrinterDate date);
     QString readStr(int count);

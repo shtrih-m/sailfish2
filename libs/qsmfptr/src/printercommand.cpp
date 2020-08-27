@@ -323,6 +323,20 @@ PrinterTime PrinterCommand::readTime2()
     return result;
 }
 
+PrinterDateTime PrinterCommand::readDateTime(){
+    PrinterDateTime dt;
+    dt.date = readDate();
+    dt.time = readTime();
+    return dt;
+}
+
+PrinterDateTime PrinterCommand::readDateTime2(){
+    PrinterDateTime dt;
+    dt.date = readDate2();
+    dt.time = readTime2();
+    return dt;
+}
+
 int PrinterCommand::getTimeout()
 {
     switch (code) {
