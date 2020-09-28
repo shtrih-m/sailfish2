@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.9.1, 2020-08-26T18:42:33. -->
+<!-- Written by QtCreator 4.9.1, 2020-09-22T15:24:09. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -399,7 +399,7 @@
      <value type="int">13</value>
      <value type="int">14</value>
     </valuelist>
-    <value type="QString" key="MerRunConfiguration.QmlLiveBenchWorkspace">C:/projects/Mer/QmlTest</value>
+    <value type="QString" key="MerRunConfiguration.QmlLiveBenchWorkspace">C:/projects/Mer/QmlTest2/sailfish2</value>
     <value type="bool" key="MerRunConfiguration.QmlLiveEnabled">false</value>
     <value type="int" key="MerRunConfiguration.QmlLiveIpcPort">-1</value>
     <value type="int" key="MerRunConfiguration.QmlLiveOptions">3</value>
@@ -407,8 +407,8 @@
     <value type="int" key="PE.EnvironmentAspect.Base">1</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName"></value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">QmlTest (on Jolla C (ARM))</value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">QmakeProjectManager.MerRunConfiguration:C:/projects/Mer/QmlTest/QmlTest/QmlTest.pro</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">QmlTest (on Jolla C (ARM))2</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">QmakeProjectManager.MerRunConfiguration:C:/projects/Mer/QmlTest2/sailfish2/QmlTest/QmlTest.pro</value>
     <value type="int" key="RemoteLinux.EnvironmentAspect.Version">1</value>
     <value type="QString" key="RemoteLinux.RunConfig.AlternateRemoteExecutable"></value>
     <value type="bool" key="RemoteLinux.RunConfig.UseAlternateRemoteExecutable">false</value>

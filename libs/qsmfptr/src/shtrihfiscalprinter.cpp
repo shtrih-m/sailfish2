@@ -410,9 +410,13 @@ int ShtrihFiscalPrinter::connectDevice()
     logger->write(QString("capPrintGraphics3: %1").arg(capPrintGraphics3));
     */
 
-    if (userNameEnabled && (deviceType.model == 19))
+    if (userNameEnabled)
     {
-        readTable(14, 1, 7, userName);
+        if (isShtrihMobile()){
+            readTable(14, 1, 7, userName);
+        } else{
+            readTable(18, 1, 7, userName);
+        }
     }
 
     if (fdoThreadEnabled)
@@ -438,13 +442,22 @@ void ShtrihFiscalPrinter::disconnectDevice()
 
 void ShtrihFiscalPrinter::startFDOThread()
 {
+    logger->write("startFDOThread");
     if (thread == nullptr)
     {
-        logger->write("startFDOThread");
-        // read FDO server parameters
-        serverParams.address = readTableStr(15, 1, 1);
-        serverParams.port = readTableStr(15, 1, 2).toInt();
-        pollInterval = readTableStr(15, 1, 3).toUInt()*1000;
+        // read FDO server parameters if not set
+        if (serverParams.address.isEmpty())
+        {
+            if (isShtrihMobile()){
+                serverParams.address = readTableStr(15, 1, 1);
+                serverParams.port = readTableStr(15, 1, 2).toInt();
+                pollInterval = readTableStr(15, 1, 3).toUInt()*1000;
+            } else {
+                serverParams.address = readTableStr(19, 1, 1);
+                serverParams.port = readTableStr(19, 1, 2).toInt();
+                pollInterval = readTableStr(19, 1, 3).toUInt();
+            }
+        }
         serverParams.connectTimeout = 20000;
         serverParams.readTimeout = 100000;
         serverParams.writeTimeout = 20000;
@@ -3168,7 +3181,7 @@ int ShtrihFiscalPrinter::printStorno(ReceiptItemCommand& data)
 
 void ShtrihFiscalPrinter::beforeCloseReceipt()
 {
-    if (userNameEnabled && (deviceType.model == 19) && (!userName.isEmpty()))
+    if (userNameEnabled && (!userName.isEmpty()))
     {
         fsWriteTag(1048, userName);
     }
