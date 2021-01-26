@@ -96,7 +96,7 @@ private:
     bool receiptOpened;
     QString deviceName;
     uint8_t operatorNumber;
-    QString paymentNames[4];
+    QString paymentNames[16];
     ShtrihFiscalPrinter* printer;
     QVector<PrinterOperator> printerOperators;
     QString docNames[4];
@@ -158,6 +158,7 @@ public:
     void printTrailer(uint8_t event, PasswordCommand& data);
     void printStorno(uint8_t event, ReceiptItemCommand& data);
     void closeReceipt(uint8_t event, CloseReceiptCommand& data);
+    void fsCloseReceipt(uint8_t event, FSCloseReceipt& data);
     void printDiscount(uint8_t event, AmountAjustCommand& data);
     void printCharge(uint8_t event, AmountAjustCommand& data);
     void printAmountAjustment(uint8_t event, int code, AmountAjustCommand& data);

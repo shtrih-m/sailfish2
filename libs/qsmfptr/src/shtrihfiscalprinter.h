@@ -1721,6 +1721,7 @@ public:
     virtual void printTrailer(uint8_t event, PasswordCommand& data)=0;
     virtual void printStorno(uint8_t event, ReceiptItemCommand& data)=0;
     virtual void closeReceipt(uint8_t event, CloseReceiptCommand& data)=0;
+    virtual void fsCloseReceipt(uint8_t event, FSCloseReceipt& data)=0;
     virtual void printDiscount(uint8_t event, AmountAjustCommand& data)=0;
     virtual void printCharge(uint8_t event, AmountAjustCommand& data)=0;
     virtual void cancelReceipt(uint8_t event, PasswordCommand& data)=0;
@@ -1752,7 +1753,6 @@ public:
     virtual void fmReadTotals(uint8_t event, FMReadTotalsCommand& data)=0;
     virtual void fsReadTotals(uint8_t event, FSReadTotalsCommand& data)=0;
     virtual void fsReadDocCount(uint8_t event, int& docCount)=0;
-
     virtual void fmReadLastDate(uint8_t event, FMReadLastDateCommand& data)=0;
     virtual void fmReadRange(uint8_t event, FMReadRangeCommand& data)=0;
     virtual void fmDatesReport(uint8_t event, FMDatesReportCommand& data)=0;
@@ -2020,6 +2020,11 @@ public:
     }
 
     virtual void closeReceipt(uint8_t event, CloseReceiptCommand& data)    {
+        (void)event;
+        (void)data;
+    }
+
+    virtual void fsCloseReceipt(uint8_t event, FSCloseReceipt& data){
         (void)event;
         (void)data;
     }
@@ -2566,6 +2571,7 @@ public:
     int readKMServerStatus(KMServerStatus& data);
     int acceptDeclineBarcode(bool accept);
     int rebootPrinter();
+    int getMaxPaymentNumber();
 private:
     Logger* logger;
     QMutex* mutex;

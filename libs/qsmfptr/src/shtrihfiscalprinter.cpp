@@ -6963,6 +6963,8 @@ int ShtrihFiscalPrinter::fsPrintSale(FSSale& data)
 int ShtrihFiscalPrinter::fsCloseReceipt(FSCloseReceipt& data)
 {
     logger->write("fsCloseReceipt");
+    filter->fsCloseReceipt(EVENT_BEFORE, data);
+
     PrinterCommand command(0xFF45);
     command.write(usrPassword, 4);
     for (int i=0;i<16;i++){
@@ -6998,6 +7000,7 @@ int ShtrihFiscalPrinter::fsCloseReceipt(FSCloseReceipt& data)
             data.date = command.readDate();
             data.time = command.readTime2();
         }
+        filter->fsCloseReceipt(EVENT_AFTER, data);
     }
     return resultCode;
 }
@@ -8040,3 +8043,8 @@ int ShtrihFiscalPrinter::writeDateTime(QDateTime dt)
     }
     return rc;
 }
+
+int ShtrihFiscalPrinter::getMaxPaymentNumber(){
+    return 16;
+}
+

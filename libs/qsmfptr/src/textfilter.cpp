@@ -22,6 +22,12 @@ QString quantityToStr(uint64_t value) {
     return buffer.sprintf("%.3f", d / 1000.0);
 }
 
+QString quantity6ToStr(uint64_t value) {
+    QString buffer;
+    double d = value;
+    return buffer.sprintf("%.6f", d / 1000000.0);
+}
+
 QString summToStr(uint64_t amount) {
     return "=" + amountToStr(amount);
 }
@@ -30,6 +36,12 @@ QString summToStr(uint64_t price, uint64_t quantity)
 {
     double d = price * quantity;
     return summToStr(round2(d / 1000.0));
+}
+
+QString summ6ToStr(uint64_t price, uint64_t quantity)
+{
+    double d = price * quantity;
+    return summToStr(round2(d / 1000000.0));
 }
 
 QString getTaxLetter(int tax)
@@ -117,7 +129,8 @@ void TextFilter::connect()
     operatorNumber = status.operatorNumber;
     isFiscal = (status.operatorNumber > 0);
     isEJPresent = testBit(status.flags, 5);
-    for (int i = 0; i <= 3; i++)
+    int count = printer->getMaxPaymentNumber();
+    for (int i = 0; i < count; i++)
     {
         paymentNames[i] = printer->readPaymentName(i+1);
      }
@@ -335,11 +348,11 @@ void TextFilter::printSale(uint8_t event, FSSale2& data)
 
         add(data.text);
 
-        QString line = quantityToStr(data.quantity) + " X " +
+        QString line = quantity6ToStr(data.quantity) + " X " +
             amountToStr(data.price);
         add("", line);
 
-        line = summToStr(data.price, data.quantity) +
+        line = summ6ToStr(data.price, data.quantity) +
             getTaxText(data.tax);
         add(buffer.sprintf("%d", data.department), line);
     }
@@ -430,6 +443,38 @@ void TextFilter::closeReceipt(uint8_t event, CloseReceiptCommand& data)
         }
         if (data.amount4 > 0) {
             add(SCardPayment, summToStr(data.amount4));
+        }
+        // Change
+        if (data.change > 0)
+            add(SChangeText, summToStr(data.change));
+
+        addDocMac();
+        addFiscalSign();
+        endDocument();
+    }
+}
+
+void TextFilter::fsCloseReceipt(uint8_t event, FSCloseReceipt& data)
+{
+    if (event == EVENT_AFTER){
+        receiptOpened = false;
+        add(data.text);
+
+        uint64_t receiptTotal = 0;
+        ReadSubtotalCommand command;
+        printer->readSubtotal(command);
+        if (printer->succeeded(command.resultCode)){
+            receiptTotal = command.amount;
+        }
+
+        // TOTAL =123.34
+        add(SReceiptTotal, summToStr(receiptTotal));
+        // Payments
+        for (int i=0;i<16;i++)
+        {
+            if (data.payments[i] > 0){
+                add(paymentNames[i], summToStr(data.payments[i]));
+            }
         }
         // Change
         if (data.change > 0)
