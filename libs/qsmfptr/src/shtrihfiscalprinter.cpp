@@ -5523,7 +5523,7 @@ int ShtrihFiscalPrinter::printImage(PrinterImage image)
 
 QString ShtrihFiscalPrinter::getVersion()
 {
-    return "1.9";
+    return "1.10";
 }
 
 int ShtrihFiscalPrinter::printImage(uint16_t startLine, uint16_t endLine)
