@@ -345,8 +345,7 @@ int ShtrihFiscalPrinter::waitForPrinting()
 
         case ECR_SUBMODE_PASSIVE:
         case ECR_SUBMODE_ACTIVE: {
-            //rc = checkPaper(status);
-            return rc;
+            return 0x6B;
         }
 
         case ECR_SUBMODE_REPORT:
