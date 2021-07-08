@@ -339,14 +339,22 @@ int ShtrihFiscalPrinter::waitForPrinting()
             case MODE_TECH:
                 rc = writeCurrentDateTime();
                 break;
+
+            default:
+                return rc;
             }
-            return rc;
+            break;
         }
 
+        case ECR_SUBMODE_AFTER:
+            PasswordCommand command;
+            rc = continuePrint(command);
+            break;
+
         case ECR_SUBMODE_PASSIVE:
-        case ECR_SUBMODE_ACTIVE: {
-            return 0x6B;
-        }
+        case ECR_SUBMODE_ACTIVE:
+            rc = 0x6B;
+            break;
 
         case ECR_SUBMODE_REPORT:
         case ECR_SUBMODE_PRINT: {
@@ -354,10 +362,9 @@ int ShtrihFiscalPrinter::waitForPrinting()
             break;
         }
 
-        default: {
-            break;
+        default: return rc;
         }
-        }
+        if (failed(rc)) return rc;
     }
     return rc;
 }
@@ -908,7 +915,9 @@ int ShtrihFiscalPrinter::readLongStatus(ReadLongStatusCommand& data)
         data.mode = command.readChar();
         data.submode = command.readChar();
         data.portNumber = command.readChar();
-        data.fmFirmwareVersion = command.readChar() + "." + command.readChar();
+        data.fmFirmwareVersion = " . ";
+        data.fmFirmwareVersion[0] = command.readChar();
+        data.fmFirmwareVersion[2] = command.readChar();
         data.fmFirmwareBuild = command.readShort();
         data.fmFirmwareDate = command.readDate();
         data.date = command.readDate();
@@ -5523,7 +5532,7 @@ int ShtrihFiscalPrinter::printImage(PrinterImage image)
 
 QString ShtrihFiscalPrinter::getVersion()
 {
-    return "1.10";
+    return "1.11";
 }
 
 int ShtrihFiscalPrinter::printImage(uint16_t startLine, uint16_t endLine)
@@ -7471,6 +7480,7 @@ int ShtrihFiscalPrinter::fsSendItemBarcode(FSSendItemBarcode& data)
         data.itemCode = command.read16();
         data.codeType = command.read8();
     }
+    return data.resultCode;
 }
 
 /*****************************************************************************
@@ -7504,6 +7514,7 @@ int ShtrihFiscalPrinter::readKMServerStatus(KMServerStatus& data)
         data.dateTimeFirstDocumentQueue = command.readDateTime2();
         data.freeSize = command.read32();
     }
+    return rc;
 }
 
 /*****************************************************************************
